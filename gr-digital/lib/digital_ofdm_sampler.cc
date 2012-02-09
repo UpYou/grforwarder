@@ -35,7 +35,7 @@
 static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("rx_time");
 static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
 
-#define VERBOSE 0
+#define VERBOSE 1
     
 // Keep track of the RX timestamp
 double lts_frac_of_secs;
@@ -104,8 +104,10 @@ digital_ofdm_sampler::general_work (int noutput_items,
 		// Now, compute the actual time in seconds and fractional seconds of the preamble
 		lts_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
 		lts_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
-  } else {
-    std::cerr << "---- SAMPLER: with no sync timestamp?\n";
+    std::cout << "got USRP timestamp\n";
+    std::cout << "... lts_sec: "<< lts_secs << "\n";
+    std::cout << "... lts_fs: "<< lts_frac_of_secs << "\n";
+    std::cout << "... nread: "<< nread << "  ninput_items[0]: " << ninput_items[0] << "\n";
   }
 
 
@@ -131,7 +133,7 @@ digital_ofdm_sampler::general_work (int noutput_items,
       // The analog to digital converter is 400 million samples / sec.  That translates to 
       // 2.5ns of time for every sample.
       double time_per_sample = 1 / 100000000.0 * (int)(1/this->relative_rate());
-			uint64_t samples_passed = lts_samples_since + index;
+      uint64_t samples_passed = lts_samples_since + index;
       double elapsed = samples_passed * time_per_sample;
 			
       // Use the last time stamp to calculate the time of the premable synchronization
@@ -153,15 +155,22 @@ digital_ofdm_sampler::general_work (int noutput_items,
 			}
 
       // Pack up our time of synchronization, pass it along using the stream tags
-      gr_tag_t tag;   // create a new tag
-      tag.srcid = pmt::pmt_string_to_symbol(this->name());    // to know the source block that created tag
-      tag.offset=index;     // the offset in the sample stream that we found this tag
-      tag.key=SYNC_TIME;    // the "key" of the tag, which I've defined to be "SYNC_TIME"
-      tag.value = pmt::pmt_make_tuple(
+//      gr_tag_t tag;   // create a new tag
+//      tag.srcid = pmt::pmt_string_to_symbol(this->name());    // to know the source block that created tag
+//      tag.offset=nitems_written(1);     // the offset in the sample stream that we found this tag
+//      tag.key=TIME_KEY; // SYNC_TIME;    // the "key" of the tag, which I've defined to be "SYNC_TIME"
+//      tag.value = pmt::pmt_make_tuple(
+//          pmt::pmt_from_uint64((int)elapsed),      // FPGA clock in seconds that we found the sync
+//          pmt::pmt_from_double(elapsed / (int)elapsed)  // FPGA clock in fractional seconds that we found the sync
+//        );
+//      add_item_tag(1, tag);
+      const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
+      const pmt::pmt_t val = pmt::pmt_make_tuple(
           pmt::pmt_from_uint64((int)elapsed),      // FPGA clock in seconds that we found the sync
           pmt::pmt_from_double(elapsed / (int)elapsed)  // FPGA clock in fractional seconds that we found the sync
         );
-      add_item_tag(0, tag);
+      this->add_item_tag(1, nitems_written(1), SYNC_TIME, val, _id);
+      std::cout<<"---- [OFDM_SAMPLER] Offset: "<<nitems_written(1)<<" \n"; //" nitems_written(0) "<<nitems_written(0)<<"\n";
     }
     else
       index++;

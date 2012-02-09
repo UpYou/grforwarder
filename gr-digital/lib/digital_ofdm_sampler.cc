@@ -104,6 +104,8 @@ digital_ofdm_sampler::general_work (int noutput_items,
 		// Now, compute the actual time in seconds and fractional seconds of the preamble
 		lts_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
 		lts_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
+  } else {
+    std::cerr << "---- SAMPLER: with no sync timestamp?\n";
   }
 
 

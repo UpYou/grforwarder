@@ -34,7 +34,7 @@
 #include <iostream>
 #include <string.h>
 
-#define VERBOSE 1
+#define VERBOSE 0
 static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
 
 inline void
@@ -350,7 +350,7 @@ digital_ofdm_frame_sink::work (int noutput_items,
 	  while((j < bytes) && (d_packetlen_cnt < d_packetlen)) {
 	    d_packet[d_packetlen_cnt++] = d_bytes_out[j++];
 	  }
-	  std::cout<<"j="<<j<<" bytes="<<bytes<<" d_packetlen_cnt="<<d_packetlen_cnt<<std::endl;
+	  // std::cout<<"j="<<j<<" bytes="<<bytes<<" d_packetlen_cnt="<<d_packetlen_cnt<<std::endl;
 	  if(d_packetlen_cnt == d_packetlen) {
 	    	gr_message_sptr msg =
 	      		gr_make_message(0, d_packet_whitener_offset, 0, d_packetlen);
@@ -402,6 +402,20 @@ digital_ofdm_frame_sink::work (int noutput_items,
 	gr_message_sptr msg =
 	  gr_make_message(0, d_packet_whitener_offset, 0, d_packetlen_cnt);
 	memcpy(msg->msg(), d_packet, d_packetlen_cnt);
+
+	// NOTE: let's now check for the preamble sync timestamp if we can not run the branch above
+	std::vector<gr_tag_t> rx_sync_tags;
+	const uint64_t nread = this->nitems_read(0);
+	this->get_tags_in_range(rx_sync_tags, 0, nread, nread+input_items.size(), SYNC_TIME);
+	if(rx_sync_tags.size()>0) {
+		size_t t = rx_sync_tags.size()-1;
+		const pmt::pmt_t &value = rx_sync_tags[t].value;
+		uint64_t sync_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
+		double sync_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
+		msg->set_timestamp(sync_secs, sync_frac_of_secs);
+	} else {
+		std::cerr << "---- Header received, with no sync timestamp?\n";
+	}
 	
 	d_target_queue->insert_tail(msg);		// send it
 	msg.reset();  				// free it up

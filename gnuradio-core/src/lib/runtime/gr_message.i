@@ -47,9 +47,13 @@ class gr_message {
 public:
   ~gr_message ();
 
+  void set_timestamp(uint64_t ps, double pfs);
   long type() const   { return d_type; }
   double arg1() const { return d_arg1; }
   double arg2() const { return d_arg2; }
+  bool timestamp_valid() const { return d_timestamp_valid; }
+  uint64_t preamble_sec() const { return d_preamble_sec; }
+  double preamble_frac_sec() const { return d_preamble_frac_sec; }
 
   void set_type(long type)   { d_type = type; }
   void set_arg1(double arg1) { d_arg1 = arg1; }

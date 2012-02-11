@@ -32,6 +32,7 @@
 #include <iostream>
 
 #define VERBOSE 0
+#define MY_DEBUG 1
 #define M_TWOPI (2*M_PI)
 #define MAX_NUM_SYMBOLS 1000
 
@@ -204,8 +205,10 @@ digital_ofdm_frame_acquisition::general_work(int noutput_items,
 	const pmt::pmt_t &value = rx_sync_tags[t].value;
 	uint64_t sync_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
 	double sync_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
-	std::cout << "---- [ACQUISITION] Range: ["<<nread<<":"<<nread+input_items.size()<<"]\n";
-	std::cout << "---- [ACQUISITION] Timestamp received, lts = "<<sync_secs<<"\t fts = "<<sync_frac_of_secs<<"\n";
+	if(MY_DEBUG) {
+	    std::cout << "---- [ACQUISITION] Range: ["<<nread<<":"<<nread+input_items.size()<<"]\n";
+	    std::cout << "---- [ACQUISITION] Timestamp received, lts = "<<sync_secs<<"\t fts = "<<sync_frac_of_secs<<"\n";
+	}
     } else {
 	std::cerr << "---- [ACQUISITION] Range: ["<<nread<<":"<<nread+input_items.size()<<"]\n";
 	std::cerr << "---- [ACQUISITION] Header received, with no sync timestamp? "<<"\n";

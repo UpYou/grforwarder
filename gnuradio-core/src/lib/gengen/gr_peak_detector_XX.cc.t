@@ -90,7 +90,11 @@ int
 	d_avg = (d_avg_alpha)*iptr[i] + (1-d_avg_alpha)*d_avg;
 	i++;
       }
-      else {
+      else if (peak_val > 10){	// add by lzyou: avoid outputing 1 at the end of a packet
+	state = 0;
+	peak_val = -(@I_TYPE@)INFINITY;
+      } else {
+	// printf("Leaving  State 1: Peak: %f  Avg: %f  Value: %f  Peak Ind: %d   i: %d  noutput_items: %d\n", peak_val, d_avg, iptr[i], peak_ind, i, noutput_items);
 	optr[peak_ind] = 1;
 	state = 0;
 	peak_val = -(@I_TYPE@)INFINITY;

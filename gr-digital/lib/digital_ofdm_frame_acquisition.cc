@@ -29,10 +29,13 @@
 #include <gr_expj.h>
 #include <gr_math.h>
 #include <cstdio>
+#include <iostream>
 
 #define VERBOSE 0
 #define M_TWOPI (2*M_PI)
 #define MAX_NUM_SYMBOLS 1000
+
+static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
 
 digital_ofdm_frame_acquisition_sptr
 digital_make_ofdm_frame_acquisition (unsigned int occupied_carriers,
@@ -190,6 +193,23 @@ digital_ofdm_frame_acquisition::general_work(int noutput_items,
     correlate(symbol, zeros_on_left);
     calculate_equalizer(symbol, zeros_on_left);
     signal_out[0] = 1;
+
+    // test by lzyou
+    // With a preamble, let's now check for the preamble sync timestamp
+    std::vector<gr_tag_t> rx_sync_tags;
+    const uint64_t nread = this->nitems_read(1); // port 1
+    this->get_tags_in_range(rx_sync_tags, 1, nread, nread+input_items.size(), SYNC_TIME);
+    if(rx_sync_tags.size()>0) {
+	size_t t = rx_sync_tags.size()-1;
+	const pmt::pmt_t &value = rx_sync_tags[t].value;
+	uint64_t sync_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
+	double sync_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
+	std::cout << "---- [ACQUISITION] Range: ["<<nread<<":"<<nread+input_items.size()<<"]\n";
+	std::cout << "---- [ACQUISITION] Timestamp received, lts = "<<sync_secs<<"\t fts = "<<sync_frac_of_secs<<"\n";
+    } else {
+	std::cerr << "---- [ACQUISITION] Range: ["<<nread<<":"<<nread+input_items.size()<<"]\n";
+	std::cerr << "---- [ACQUISITION] Header received, with no sync timestamp? "<<"\n";
+    }
   }
   else {
     signal_out[0] = 0;

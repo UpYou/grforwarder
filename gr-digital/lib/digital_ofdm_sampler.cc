@@ -36,6 +36,7 @@ static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("rx_time");
 static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
 
 #define VERBOSE 1
+#define MY_DEBUG 1
     
 // Keep track of the RX timestamp
 double lts_frac_of_secs;
@@ -170,7 +171,8 @@ digital_ofdm_sampler::general_work (int noutput_items,
           pmt::pmt_from_double(elapsed / (int)elapsed)  // FPGA clock in fractional seconds that we found the sync
         );
       this->add_item_tag(1, nitems_written(1), SYNC_TIME, val, _id);
-      std::cout<<"---- [OFDM_SAMPLER] Offset: "<<nitems_written(1)<<" \n"; //" nitems_written(0) "<<nitems_written(0)<<"\n";
+      if(MY_DEBUG)
+        std::cout<<"---- [OFDM_SAMPLER] Offset: "<<nitems_written(1)<<" \n"; //" nitems_written(0) "<<nitems_written(0)<<"\n";
     }
     else
       index++;

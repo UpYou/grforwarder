@@ -35,7 +35,7 @@
 #include <string.h>
 
 #define VERBOSE 0
-#define MY_DEBUG 1
+#define MY_DEBUG 0
 
 static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("rx_time");
 static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
@@ -332,11 +332,13 @@ digital_ofdm_frame_sink::work (int noutput_items,
 			const pmt::pmt_t &value = rx_sync_tags[t].value;
 			lts_sync_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
 			lts_sync_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
-			if(MY_DEBUG)
-				std::cout << "---- [FRAME_SINK] Timestamp received, lts = "<<lts_sync_secs<<"\t fts = "<<lts_sync_frac_of_secs<<"\n";
+//			std::cout << "---- [FRAME_SINK_1]  nread: "<<nread<<"\n";
+			if(MY_DEBUG) {
+				std::cout << "---- [FRAME_SINK]  Timestamp received, lts = "<<lts_sync_secs<<"\t fts = "<<lts_sync_frac_of_secs<<"\n";
+			}
 		} else {
-			std::cerr << "---- [FRAME_SINK-STATE_HAVE_SYNC] Range: ["<<nread<<":"<<nread+input_items.size()<<"]\n";
-			std::cerr << "---- [FRAME_SINK-STATE_HAVE_SYNC] Header received, with no sync timestamp? "<<"\n";
+			std::cerr << "---- [FRAME_SINK][STATE_HAVE_SYNC] Range: ["<<nread<<":"<<nread+input_items.size()<<")\n";
+			std::cerr << "---- [FRAME_SINK][STATE_HAVE_SYNC] Header received, with no sync timestamp? "<<"\n";
 		}
 
     }
@@ -394,7 +396,7 @@ digital_ofdm_frame_sink::work (int noutput_items,
 //			std::cerr << "---- [STATE_HAVE_SYNC] Range: ["<<nread<<":"<<nread+input_items.size()<<"]\n";
 //			std::cerr << "---- [STATE_HAVE_SYNC] Header received, with no sync timestamp? "<<"\n";
 //		}
-
+	    std::cout << "---- [FRAME_SINK_2]  nread: "<<nitems_read(1)<<"\n";
 	    msg->set_timestamp(lts_sync_secs, lts_sync_frac_of_secs);
 	    d_target_queue->insert_tail(msg);		// send it
 	    msg.reset();  				// free it up
@@ -432,18 +434,20 @@ digital_ofdm_frame_sink::work (int noutput_items,
 	// NOTE: let's now check for the preamble sync timestamp if we can not run the branch above
 //	std::vector<gr_tag_t> rx_sync_tags;
 //	const uint64_t nread = this->nitems_read(1);
-//	this->get_tags_in_range(rx_sync_tags, 1, nread-5, nread+input_items.size(), SYNC_TIME);
+//	this->get_tags_in_range(rx_sync_tags, 1, nread-17, nread+input_items.size(), SYNC_TIME);
 //	if(rx_sync_tags.size()>0) {
 //		size_t t = rx_sync_tags.size()-1;
 //		const pmt::pmt_t &value = rx_sync_tags[t].value;
 //		uint64_t sync_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
 //		double sync_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
+//		std::cout << "---- [STATE_HAVE_HEADER] Range: ["<<nread-17<<":"<<nread+input_items.size()<<")\n";
+//		std::cout << "---- [STATE_HAVE_HEADER] "<<sync_secs<<":"<<sync_frac_of_secs<<"\n";
 //		msg->set_timestamp(sync_secs, sync_frac_of_secs);
 //	} else {
-//		std::cerr << "---- [STATE_HAVE_HEADER] Range: ["<<nread<<":"<<nread+input_items.size()<<"]\n";
+//		std::cerr << "---- [STATE_HAVE_HEADER] Range: ["<<nread-17<<":"<<nread+input_items.size()<<"]\n";
 //		std::cerr << "---- [STATE_HAVE_HEADER] Header received, with no sync timestamp? "<<"\n";
 //	}
-	
+//	std::cout << "---- [FRAME_SINK_3]  nread: "<<nitems_read(1)<<"\t Packet Length: "<<d_packetlen<<"\n";
 	msg->set_timestamp(lts_sync_secs, lts_sync_frac_of_secs);
 	d_target_queue->insert_tail(msg);		// send it
 	msg.reset();  				// free it up

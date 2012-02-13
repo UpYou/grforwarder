@@ -34,6 +34,9 @@
 #include <stdexcept>
 #include <string.h>
 
+static const pmt::pmt_t SOB_KEY  = pmt::pmt_string_to_symbol("tx_sob");
+static const pmt::pmt_t EOB_KEY  = pmt::pmt_string_to_symbol("rx_sob");
+static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("rx_time");
 
 // public constructor that returns a shared_ptr
 
@@ -77,6 +80,7 @@ gr_message_source::work(int noutput_items,
 {
   char *out = (char *) output_items[0];
   int nn = 0;
+  const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
 
   while (nn < noutput_items){
     if (d_msg){
@@ -84,6 +88,16 @@ gr_message_source::work(int noutput_items,
       // Consume whatever we can from the current message
       //
       int mm = std::min(noutput_items - nn, (int)((d_msg->length() - d_msg_offset) / d_itemsize));
+
+      if( (d_msg_offset == 0) && (d_msg->timestamp_valid()) ) {  // start of the message
+        const pmt::pmt_t val = pmt::pmt_make_tuple(
+          pmt::pmt_from_uint64(d_msg->timestamp_sec()),      // FPGA clock in seconds that we found the sync
+          pmt::pmt_from_double(d_msg->timestamp_frac_sec())  // FPGA clock in fractional seconds that we found the sync
+        );
+        this->add_item_tag(0, nitems_written(0), TIME_KEY, val, _id);
+        this->add_item_tag(0, nitems_written(0), SOB_KEY, pmt::PMT_T, _id);
+      }
+
       memcpy (out, &(d_msg->msg()[d_msg_offset]), mm * d_itemsize);
 
       nn += mm;
@@ -92,8 +106,14 @@ gr_message_source::work(int noutput_items,
       assert(d_msg_offset <= d_msg->length());
 
       if (d_msg_offset == d_msg->length()){
-	if (d_msg->type() == 1)	           // type == 1 sets EOF
+
+        if(d_msg->timestamp_valid())        // end of the message
+          this->add_item_tag(0, nitems_written(0), EOB_KEY, pmt::PMT_T, _id);
+
+	if (d_msg->type() == 1) {	           // type == 1 sets EOF
 	  d_eof = true;
+          printf(" >>> set eof true >>>\n");
+        }
 	d_msg.reset();
       }
     }

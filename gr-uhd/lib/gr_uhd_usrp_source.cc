@@ -372,7 +372,7 @@ public:
                     this->add_item_tag(i, nitems_written(0), TIME_KEY, val, _id);
                     this->add_item_tag(i, nitems_written(0), RATE_KEY, pmt::pmt_from_double(_samp_rate), _id);
                     this->add_item_tag(i, nitems_written(0), FREQ_KEY, pmt::pmt_from_double(_center_freq), _id);
-		    //std::cout<<"... [USRP] Offset: "<<nitems_written(0)<<" \n";
+//		    std::cout<<"... [USRP] Offset: "<<nitems_written(0)<<" \n";
                 }
             }
             break;

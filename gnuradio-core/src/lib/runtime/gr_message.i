@@ -52,8 +52,8 @@ public:
   double arg1() const { return d_arg1; }
   double arg2() const { return d_arg2; }
   bool timestamp_valid() const { return d_timestamp_valid; }
-  uint64_t preamble_sec() const { return d_preamble_sec; }
-  double preamble_frac_sec() const { return d_preamble_frac_sec; }
+  uint64_t timestamp_sec() const { return d_timestamp_sec; }
+  double timestamp_frac_sec() const { return d_timestamp_frac_sec; }
 
   void set_type(long type)   { d_type = type; }
   void set_arg1(double arg1) { d_arg1 = arg1; }

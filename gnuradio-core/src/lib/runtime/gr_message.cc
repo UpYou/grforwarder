@@ -26,6 +26,7 @@
 #include <gr_message.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 static long s_ncurrently_allocated = 0;
 
@@ -44,6 +45,7 @@ gr_make_message_from_string(const std::string s, long type, double arg1, double 
 }
 
 void gr_message::set_timestamp(uint64_t ps, double pfs) {
+//        printf(">>>>>> set msg timestamp >>>>>> \n");
 	d_timestamp_valid=true;
 	d_timestamp_sec=ps;
 	d_timestamp_frac_sec=pfs;

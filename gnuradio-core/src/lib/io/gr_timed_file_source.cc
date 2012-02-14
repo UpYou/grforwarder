@@ -50,8 +50,8 @@
 #endif
 
 static const pmt::pmt_t SOB_KEY  = pmt::pmt_string_to_symbol("tx_sob");
-static const pmt::pmt_t EOB_KEY  = pmt::pmt_string_to_symbol("rx_sob");
-static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("rx_time");
+static const pmt::pmt_t EOB_KEY  = pmt::pmt_string_to_symbol("tx_eob");
+static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("tx_time");
 
 gr_timed_file_source::gr_timed_file_source (size_t itemsize, const char *filename, uint64_t lts_secs, double lts_frac_of_secs)
   : gr_sync_block ("file_source",
@@ -105,7 +105,8 @@ gr_timed_file_source::work (int noutput_items,
           pmt::pmt_from_double(d_lts_frac_of_secs)  // FPGA clock in fractional seconds that we found the sync
         );
       this->add_item_tag(0, nitems_written(0), TIME_KEY, val, _id);
-      this->add_item_tag(0, nitems_written(0), SOB_KEY, pmt::PMT_T, _id);  
+      this->add_item_tag(0, nitems_written(0), SOB_KEY, pmt::PMT_T, _id);
+      printf("Start of Burst | TIME: %d \n", nitems_written(0));
   }
 
   while (size) {
@@ -125,7 +126,9 @@ gr_timed_file_source::work (int noutput_items,
     // of the file and try again, else break
 
     if (!d_repeat) {
-      this->add_item_tag(0, nitems_written(0), EOB_KEY, pmt::PMT_T, _id);  
+      if (size == noutput_items)
+          printf("End of Burst: %d \t %d\n", nitems_written(0), nitems_written(0)+noutput_items);
+      this->add_item_tag(0, nitems_written(0)+1, EOB_KEY, pmt::PMT_T, _id);  
       break;
     }
 

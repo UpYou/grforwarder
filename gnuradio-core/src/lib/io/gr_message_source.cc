@@ -89,11 +89,18 @@ gr_message_source::work(int noutput_items,
       //
       int mm = std::min(noutput_items - nn, (int)((d_msg->length() - d_msg_offset) / d_itemsize));
 
+//      if(d_msg->timestamp_valid()) {
+//        printf(">>> valid msg >>>\n");
+//      } else {
+//        printf(">>> invalid msg >>>\n");
+//      }
+
       if( (d_msg_offset == 0) && (d_msg->timestamp_valid()) ) {  // start of the message
         const pmt::pmt_t val = pmt::pmt_make_tuple(
           pmt::pmt_from_uint64(d_msg->timestamp_sec()),      // FPGA clock in seconds that we found the sync
           pmt::pmt_from_double(d_msg->timestamp_frac_sec())  // FPGA clock in fractional seconds that we found the sync
         );
+        printf(" >>> set timestamp >>> %d \t %f \n", d_msg->timestamp_sec(), d_msg->timestamp_frac_sec());
         this->add_item_tag(0, nitems_written(0), TIME_KEY, val, _id);
         this->add_item_tag(0, nitems_written(0), SOB_KEY, pmt::PMT_T, _id);
       }

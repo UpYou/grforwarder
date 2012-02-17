@@ -35,8 +35,8 @@
 #include <string.h>
 
 static const pmt::pmt_t SOB_KEY  = pmt::pmt_string_to_symbol("tx_sob");
-static const pmt::pmt_t EOB_KEY  = pmt::pmt_string_to_symbol("rx_sob");
-static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("rx_time");
+static const pmt::pmt_t EOB_KEY  = pmt::pmt_string_to_symbol("tx_eob");
+static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("tx_time");
 
 // public constructor that returns a shared_ptr
 
@@ -89,20 +89,14 @@ gr_message_source::work(int noutput_items,
       //
       int mm = std::min(noutput_items - nn, (int)((d_msg->length() - d_msg_offset) / d_itemsize));
 
-//      if(d_msg->timestamp_valid()) {
-//        printf(">>> valid msg >>>\n");
-//      } else {
-//        printf(">>> invalid msg >>>\n");
-//      }
-
       if( (d_msg_offset == 0) && (d_msg->timestamp_valid()) ) {  // start of the message
         const pmt::pmt_t val = pmt::pmt_make_tuple(
           pmt::pmt_from_uint64(d_msg->timestamp_sec()),      // FPGA clock in seconds that we found the sync
           pmt::pmt_from_double(d_msg->timestamp_frac_sec())  // FPGA clock in fractional seconds that we found the sync
         );
-        printf(" >>> set timestamp >>> %d \t %f \n", d_msg->timestamp_sec(), d_msg->timestamp_frac_sec());
-        this->add_item_tag(0, nitems_written(0), TIME_KEY, val, _id);
-        this->add_item_tag(0, nitems_written(0), SOB_KEY, pmt::PMT_T, _id);
+//        printf(">>> set SOB/TIME tag, timestamp %f at %d | noutput_items = %d | d_itemsize = %d \n", d_msg->timestamp_sec()+d_msg->timestamp_frac_sec(), nitems_written(0)+nn, noutput_items, d_itemsize);
+        this->add_item_tag(0, nitems_written(0)+nn, TIME_KEY, val, _id);  // nn denotes the starting point of a message
+        this->add_item_tag(0, nitems_written(0)+nn, SOB_KEY, pmt::PMT_T, _id);
       }
 
       memcpy (out, &(d_msg->msg()[d_msg_offset]), mm * d_itemsize);
@@ -113,13 +107,14 @@ gr_message_source::work(int noutput_items,
       assert(d_msg_offset <= d_msg->length());
 
       if (d_msg_offset == d_msg->length()){
-
-        if(d_msg->timestamp_valid())        // end of the message
-          this->add_item_tag(0, nitems_written(0), EOB_KEY, pmt::PMT_T, _id);
+        if(d_msg->timestamp_valid()) {        // end of the message
+          this->add_item_tag(0, nitems_written(0)+nn-1, EOB_KEY, pmt::PMT_T, _id);  // nn-1 denotes the end point of a message
+//          printf(" >>> set EOB tag at %d | d_msg_offset = %d | d_msg_length = %d \n", nitems_written(0)+nn-1, d_msg_offset, d_msg->length());
+        }
 
 	if (d_msg->type() == 1) {	           // type == 1 sets EOF
 	  d_eof = true;
-          printf(" >>> set eof true >>>\n");
+//          printf(" >>> set eof true | nn = %d \n", nn);
         }
 	d_msg.reset();
       }

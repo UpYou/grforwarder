@@ -46,18 +46,20 @@ uint64_t lts_samples_since;
 digital_ofdm_sampler_sptr
 digital_make_ofdm_sampler (unsigned int fft_length, 
          unsigned int symbol_length,
+         unsigned int bandwidth,
          unsigned int timeout)
 {
-  return gnuradio::get_initial_sptr(new digital_ofdm_sampler (fft_length, symbol_length, timeout));
+  return gnuradio::get_initial_sptr(new digital_ofdm_sampler (fft_length, symbol_length, bandwidth, timeout));
 }
 
 digital_ofdm_sampler::digital_ofdm_sampler (unsigned int fft_length, 
               unsigned int symbol_length,
+              unsigned int bandwidth,
               unsigned int timeout)
   : gr_block ("ofdm_sampler",
         gr_make_io_signature2 (2, 2, sizeof (gr_complex), sizeof(char)),
         gr_make_io_signature2 (2, 2, sizeof (gr_complex)*fft_length, sizeof(char)*fft_length)),
-    d_state(STATE_NO_SIG), d_timeout_max(timeout), d_fft_length(fft_length), d_symbol_length(symbol_length)
+    d_state(STATE_NO_SIG), d_timeout_max(timeout), d_fft_length(fft_length), d_symbol_length(symbol_length), d_bandwidth(bandwidth)
 {
   lts_samples_since=0;
   set_relative_rate(1.0/(double) fft_length);   // buffer allocator hint
@@ -105,10 +107,10 @@ digital_ofdm_sampler::general_work (int noutput_items,
 		// Now, compute the actual time in seconds and fractional seconds of the preamble
 		lts_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
 		lts_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
-    std::cout << "Got USRP timestamp\n";
-    std::cout << "... lts_sec: "<< lts_secs << "\n";
-    std::cout << "... lts_fs: "<< lts_frac_of_secs << "\n";
-    std::cout << "... nread: "<< nread << "  ninput_items[0]: " << ninput_items[0] << "\n";
+    std::cout << " \n Got USRP timestamp: " << lts_secs << " " << lts_frac_of_secs << std::endl;
+//    std::cout << "... lts_sec: "<< lts_secs << "\n";
+//    std::cout << "... lts_fs: "<< lts_frac_of_secs << "\n";
+//    std::cout << "... nread: "<< nread << "  ninput_items[0]: " << ninput_items[0] << "\n";
   }
 
 
@@ -131,11 +133,11 @@ digital_ofdm_sampler::general_work (int noutput_items,
       outsig[0] = 1; // tell the next block there is a preamble coming
       d_state = STATE_PREAMBLE;
 
-      // The analog to digital converter is 400 million samples / sec.  That translates to 
-      // 2.5ns of time for every sample.
-      double time_per_sample = 1 / 100000000.0 * (int)(1/this->relative_rate());
+      // The analog to digital converter is 100 million samples / sec.  That translates to 
+      // 2.5ns of time for every sample. However, we need to account decimation rate.
+      double time_per_sample = 1.0 / d_bandwidth; // lts_samples_since counts input samples 
       uint64_t samples_passed = lts_samples_since + index;
-      double elapsed = samples_passed * time_per_sample;
+      double elapsed = (double)samples_passed * time_per_sample;
 			
       // Use the last time stamp to calculate the time of the premable synchronization
       uint64_t sync_sec = (int)elapsed + lts_secs;
@@ -150,6 +152,7 @@ digital_ofdm_sampler::general_work (int noutput_items,
 				std::cout << "... relative_rate: " << relative_rate() << "\n";
 				std::cout << "... time_per_sample: " << time_per_sample << "\n";
 				std::cout << "... samples_passed: " << samples_passed << "\n";
+                                std::cout << "... bandwidth:" << d_bandwidth << "\n";
 				std::cout << "... elapsed: "<< elapsed << "\n";
 				std::cout << "... sync_sec: "<< sync_sec << "\n";
 				std::cout << "... sync_fs: "<< sync_frac_sec << "\n";
@@ -189,7 +192,7 @@ digital_ofdm_sampler::general_work (int noutput_items,
     d_timeout = d_timeout_max; // tell the system to expect at least this many symbols for a frame
     d_state = STATE_FRAME;
     consume_each(index - d_fft_length + 1); // consume up to one fft_length away to keep the history
-		lts_samples_since += index - d_fft_length + 1;
+    lts_samples_since += index - d_fft_length + 1;
     ret = 1;
     break;
     
@@ -209,14 +212,14 @@ digital_ofdm_sampler::general_work (int noutput_items,
     }
 
     consume_each(d_symbol_length); // jump up by 1 fft length and the cyclic prefix length
-		lts_samples_since += d_symbol_length;
+    lts_samples_since += d_symbol_length;
     ret = 1;
     break;
 
   case(STATE_NO_SIG):
   default:
     consume_each(index-d_fft_length); // consume everything we've gone through so far leaving the fft length history
-		lts_samples_since += index-d_fft_length;
+    lts_samples_since += index-d_fft_length;
     ret = 0;
     break;
   }

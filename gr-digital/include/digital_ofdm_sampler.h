@@ -31,6 +31,7 @@ typedef boost::shared_ptr<digital_ofdm_sampler> digital_ofdm_sampler_sptr;
 
 DIGITAL_API digital_ofdm_sampler_sptr digital_make_ofdm_sampler (unsigned int fft_length, 
 						     unsigned int symbol_length,
+						     unsigned int bandwidth,
 						     unsigned int timeout=1000);
 
 /*!
@@ -41,10 +42,12 @@ class DIGITAL_API digital_ofdm_sampler : public gr_block
 {
   friend DIGITAL_API digital_ofdm_sampler_sptr digital_make_ofdm_sampler (unsigned int fft_length, 
 							      unsigned int symbol_length,
+							      unsigned int bandwidth,                                                            
 							      unsigned int timeout);
 
   digital_ofdm_sampler (unsigned int fft_length, 
 			unsigned int symbol_length,
+			unsigned int bandwidth,
 			unsigned int timeout);
 
  private:
@@ -55,6 +58,7 @@ class DIGITAL_API digital_ofdm_sampler : public gr_block
   unsigned int d_timeout;
   unsigned int d_fft_length;
   unsigned int d_symbol_length;
+  unsigned int d_bandwidth;
 
  public:
   void forecast (int noutput_items, gr_vector_int &ninput_items_required);

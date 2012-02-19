@@ -29,6 +29,11 @@
 #include <gr_io_signature.h>
 #include <stdexcept>
 #include <string.h>
+#include <stdio.h>
+
+static const pmt::pmt_t SOB_KEY  = pmt::pmt_string_to_symbol("tx_sob");
+static const pmt::pmt_t EOB_KEY  = pmt::pmt_string_to_symbol("tx_eob");
+static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("tx_time");
 
 digital_ofdm_mapper_bcv_sptr
 digital_make_ofdm_mapper_bcv (const std::vector<gr_complex> &constellation, unsigned int msgq_limit, 
@@ -134,6 +139,8 @@ digital_ofdm_mapper_bcv::work(int noutput_items,
   
   unsigned int i=0;
 
+  const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
+
   //printf("OFDM BPSK Mapper:  ninput_items: %d   noutput_items: %d\n", ninput_items[0], noutput_items);
 
   if(d_eof) {
@@ -145,6 +152,16 @@ digital_ofdm_mapper_bcv::work(int noutput_items,
     d_msg_offset = 0;
     d_bit_offset = 0;
     d_pending_flag = 1;			   // new packet, write start of packet flag
+
+    if( d_msg->timestamp_valid() ) {       // start of the message
+        const pmt::pmt_t val = pmt::pmt_make_tuple(
+          pmt::pmt_from_uint64(d_msg->timestamp_sec()),      // FPGA clock in seconds that we found the sync
+          pmt::pmt_from_double(d_msg->timestamp_frac_sec())  // FPGA clock in fractional seconds that we found the sync
+        );
+        printf(">>> set timestamp, add SOB TIME tags at %d >>> %d \t %f \n", nitems_written(0), d_msg->timestamp_sec(), d_msg->timestamp_frac_sec());
+        this->add_item_tag(0, nitems_written(0), TIME_KEY, val, _id);
+        this->add_item_tag(0, nitems_written(0), SOB_KEY, pmt::PMT_T, _id);
+    }
     
     if((d_msg->length() == 0) && (d_msg->type() == 1)) {
       d_msg.reset();
@@ -229,8 +246,19 @@ digital_ofdm_mapper_bcv::work(int noutput_items,
 
     if (d_msg->type() == 1)	        // type == 1 sets EOF
       d_eof = true;
+
+    bool state = d_msg->timestamp_valid();
+    
     d_msg.reset();   			// finished packet, free message
     assert(d_bit_offset == 0);
+
+    if(state) {      // end of the message, fill some null samples
+//      out += d_fft_length;
+//      memset(out, 0, d_fft_length*sizeof(gr_complex));
+      this->add_item_tag(0, nitems_written(0)+1, EOB_KEY, pmt::PMT_T, _id);
+      printf(">>> adding end flag at %d >>> \n", nitems_written(0)+1);
+//      return 2;
+    }
   }
 
   if (out_flag)

@@ -34,6 +34,7 @@
 
 static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("rx_time");
 static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
+static const pmt::pmt_t SYNC_CFO = pmt::pmt_string_to_symbol("sync_cfo");
 
 #define VERBOSE 0
 #define MY_DEBUG 0
@@ -83,12 +84,11 @@ digital_ofdm_sampler::general_work (int noutput_items,
             gr_vector_const_void_star &input_items,
             gr_vector_void_star &output_items)
 {
-
   // Use the stream tags to the timestamp
   std::vector<gr_tag_t> rx_time_tags;
   const uint64_t nread = this->nitems_read(0); //number of items read on port 0
   this->get_tags_in_range(rx_time_tags, 0, nread, nread+ninput_items[0], TIME_KEY);
-
+  
   // See if there is a RX timestamp (only on first block or after underrun)
   if(rx_time_tags.size()>0) {
     size_t t = rx_time_tags.size()-1;
@@ -97,21 +97,43 @@ digital_ofdm_sampler::general_work (int noutput_items,
     const uint64_t sample_offset = rx_time_tags[t].offset;  // distance from sample to timestamp in samples
     const pmt::pmt_t &value = rx_time_tags[t].value;
 
-		// If the offset is greater than 0, this is a bit odd and complicated, so let's throw an error
-		// and if this is common, George will fix it.
-		if(sample_offset>0) {
-			std::cerr << "----- ERROR:  RX Time offset > 0, George will fix if this is common\n";
-			exit(-1);
-		}
+    // If the offset is greater than 0, this is a bit odd and complicated, so let's throw an error
+    // and if this is common, George will fix it.
+    if(sample_offset>0) {
+      std::cerr << "----- ERROR:  RX Time offset > 0, George will fix if this is common\n";
+      exit(-1);
+    }
 		
-		// Now, compute the actual time in seconds and fractional seconds of the preamble
-		lts_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
-		lts_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
+    // Now, compute the actual time in seconds and fractional seconds of the preamble
+    lts_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
+    lts_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
     std::cout << " \n Got USRP timestamp: " << lts_secs << " " << lts_frac_of_secs << std::endl;
-//    std::cout << "... lts_sec: "<< lts_secs << "\n";
-//    std::cout << "... lts_fs: "<< lts_frac_of_secs << "\n";
-//    std::cout << "... nread: "<< nread << "  ninput_items[0]: " << ninput_items[0] << "\n";
   }
+
+
+  /** Test whether we can get sync cfo value
+  const uint64_t nread1 = this->nitems_read(1);
+  std::cout<<" 1: Read items 0: "<<nread << "\t ninput_items[0]: "<< ninput_items[0] << "\t Read items 1: " << nread1 << " \t ninput_items[1]: " << ninput_items[1] <<std::endl;
+
+  std::vector<gr_tag_t> rx_sync_tags;
+  this->get_tags_in_range(rx_sync_tags, 0, nread, nread+ninput_items[0], SYNC_CFO);
+  // See if there is a RX timestamp (only on first block or after underrun)
+  if(rx_sync_tags.size()>0) {
+    size_t t = rx_sync_tags.size()-1;
+
+    // Take the last timestamp
+    const uint64_t sample_offset = rx_sync_tags[t].offset;  // distance from sample to timestamp in samples
+    const pmt::pmt_t newvalue = rx_sync_tags[t].value;
+
+    // If the offset is greater than 0, this is a bit odd and complicated, so let's throw an error
+    // and if this is common, George will fix it.
+    if(sample_offset==0) {
+      std::cerr << "----- ERROR:  RX Time offset > 0, George will fix if this is common\n";
+      exit(-1);
+    }
+
+    std::cout << " \n Got CFO Value: " << newvalue << " \t " << sample_offset << std::endl;
+  } */
 
 
   const gr_complex *iptr = (const gr_complex *) input_items[0];
@@ -122,7 +144,6 @@ digital_ofdm_sampler::general_work (int noutput_items,
 
   //FIXME: we only process a single OFDM symbol at a time; after the preamble, we can 
   // process a few at a time as long as we always look out for the next preamble.
-
   unsigned int index=d_fft_length;  // start one fft length into the input so we can always look back this far
 
   outsig[0] = 0; // set output to no signal by default
@@ -147,35 +168,45 @@ digital_ofdm_sampler::general_work (int noutput_items,
         sync_frac_sec -= (uint64_t)sync_frac_sec;
       }
 
-			if(VERBOSE) {
-				std::cout << "got a preamble.... calculating timestamp of sync\n";
-				std::cout << "... relative_rate: " << relative_rate() << "\n";
-				std::cout << "... time_per_sample: " << time_per_sample << "\n";
-				std::cout << "... samples_passed: " << samples_passed << "\n";
-                                std::cout << "... bandwidth:" << d_bandwidth << "\n";
-				std::cout << "... elapsed: "<< elapsed << "\n";
-				std::cout << "... sync_sec: "<< sync_sec << "\n";
-				std::cout << "... sync_fs: "<< sync_frac_sec << "\n";
-			}
+      if(VERBOSE) {
+	std::cout << "got a preamble.... calculating timestamp of sync\n";
+	std::cout << "... relative_rate: " << relative_rate() << "\n";
+	std::cout << "... time_per_sample: " << time_per_sample << "\n";
+	std::cout << "... samples_passed: " << samples_passed << "\n";
+        std::cout << "... bandwidth:" << d_bandwidth << "\n";
+	std::cout << "... elapsed: "<< elapsed << "\n";
+	std::cout << "... sync_sec: "<< sync_sec << "\n";
+	std::cout << "... sync_fs: "<< sync_frac_sec << "\n";
+      }
 
-      // Pack up our time of synchronization, pass it along using the stream tags
-//      gr_tag_t tag;   // create a new tag
-//      tag.srcid = pmt::pmt_string_to_symbol(this->name());    // to know the source block that created tag
-//      tag.offset=nitems_written(1);     // the offset in the sample stream that we found this tag
-//      tag.key=TIME_KEY; // SYNC_TIME;    // the "key" of the tag, which I've defined to be "SYNC_TIME"
-//      tag.value = pmt::pmt_make_tuple(
-//          pmt::pmt_from_uint64((int)elapsed),      // FPGA clock in seconds that we found the sync
-//          pmt::pmt_from_double(elapsed / (int)elapsed)  // FPGA clock in fractional seconds that we found the sync
-//        );
-//      add_item_tag(1, tag);
       const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
       const pmt::pmt_t val = pmt::pmt_make_tuple(
           pmt::pmt_from_uint64(sync_sec),      // FPGA clock in seconds that we found the sync
           pmt::pmt_from_double(sync_frac_sec)  // FPGA clock in fractional seconds that we found the sync
         );
       this->add_item_tag(1, nitems_written(1), SYNC_TIME, val, _id);
-      if(MY_DEBUG)
-        std::cout<<"---- [OFDM_SAMPLER] Adding a tag, offset: "<<nitems_written(1)<<"\t index: "<<index<<" \n"; //" nitems_written(0) "<<nitems_written(0)<<"\n";
+      if(false)
+        std::cout<<"---- [SAMPLER] Adding timestamp tag, offset: "<<nitems_written(1)<<"\t index: "<<index<<" \n"; //" nitems_written(0) "<<nitems_written(0)<<"\n";
+
+
+      // With a preamble, let's now check for the preamble sync cfo
+      std::vector<gr_tag_t> rx_sync_tags;
+      int port = 0;
+      const uint64_t nread = this->nitems_read(port);
+      this->get_tags_in_range(rx_sync_tags, port, nread, nread+ninput_items[port], SYNC_CFO);
+      if(rx_sync_tags.size()>0) {
+        size_t t = rx_sync_tags.size()-1;
+        const pmt::pmt_t value = rx_sync_tags[t].value;
+        double sync_cfo = pmt::pmt_to_double(value);
+        this->add_item_tag(1, nitems_written(1), SYNC_CFO, value, _id);
+        if(false) {
+          std::cout<<"---- [SAMPLER] Adding cfo tag, offset: "<<nitems_written(1)<<"\t index: "<<index<<" \n";
+//        std::cout << "---- [SAMPLER] Range: ["<<nread<<":"<<nread+ninput_items[port]<<") \t index: " <<index<<" \t value: "<<sync_cfo<<"\n";
+        }
+      } else {
+        //std::cout<<" 2: Read items: "<<nread << "\t ninput_items[0]: "<< ninput_items[0] << "\t index: " << index << std::endl;
+        std::cerr << "---- [SAMPLER] Preamble received, with no CFO?  \t Range: ["<<nread<<":"<<nread+ninput_items[0]<<") \t index: " <<index<<"\n";
+      }
     }
     else
       index++;
@@ -220,6 +251,7 @@ digital_ofdm_sampler::general_work (int noutput_items,
   default:
     consume_each(index-d_fft_length); // consume everything we've gone through so far leaving the fft length history
     lts_samples_since += index-d_fft_length;
+    //std::cout << index << " " << index - d_fft_length << std::endl;
     ret = 0;
     break;
   }

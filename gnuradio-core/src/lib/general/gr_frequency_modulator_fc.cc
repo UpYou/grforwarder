@@ -30,6 +30,8 @@
 #include <math.h>
 #include <boost/math/special_functions/trunc.hpp>
 
+static const pmt::pmt_t SYNC_CFO = pmt::pmt_string_to_symbol("sync_cfo");
+
 
 gr_frequency_modulator_fc_sptr gr_make_frequency_modulator_fc (double sensitivity)
 {
@@ -51,6 +53,23 @@ gr_frequency_modulator_fc::work (int noutput_items,
 {
   const float *in = (const float *) input_items[0];
   gr_complex *out = (gr_complex *) output_items[0];
+
+      // test by lzyou
+      // With a preamble, let's now check for the preamble sync timestamp
+      std::vector<gr_tag_t> rx_sync_tags;
+      int port = 0;
+      int index= 0;
+      const uint64_t nread = this->nitems_read(port);
+      this->get_tags_in_range(rx_sync_tags, port, nread+index, nread+index+input_items.size(), SYNC_CFO);
+      if(rx_sync_tags.size()>0) {
+        size_t t = rx_sync_tags.size()-1;
+        const pmt::pmt_t value = rx_sync_tags[t].value;
+        double sync_cfo = pmt::pmt_to_double(value);
+        if(false) {
+          std::cout << "---- [FM] Range: ["<<nread+index<<":"<<nread+index+input_items.size()<<") \t index: " <<index<<"\n";
+          std::cout << "---- [FM] CFO received, value = "<<sync_cfo<<"\n";
+        }
+      }
 
   for (int i = 0; i < noutput_items; i++){
     d_phase = d_phase + d_sensitivity * in[i];

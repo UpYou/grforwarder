@@ -39,10 +39,13 @@
 
 static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("rx_time");
 static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
+static const pmt::pmt_t SYNC_CFO = pmt::pmt_string_to_symbol("sync_cfo");
 
 // Keep track of the RX timestamp
 double lts_sync_frac_of_secs = 0;
 uint64_t lts_sync_secs = 0;
+bool sync_cfo_valid = false;
+double sync_cfo_value = 0;
 
 inline void
 digital_ofdm_frame_sink::enter_search()
@@ -305,6 +308,31 @@ digital_ofdm_frame_sink::work (int noutput_items,
   unsigned int j = 0;
   unsigned int bytes=0;
 
+  /**
+  const uint64_t nread_0 = this->nitems_read(0);
+  const uint64_t nread_1 = this->nitems_read(1);
+  std::cout<<" 1: Read items 0: "<< nread_0 << "\t ninput_items: "<< noutput_items << "\t Read items 1: " << nread_1 <<std::endl;
+ 
+  std::vector<gr_tag_t> rx_tags;
+  this->get_tags_in_range(rx_tags, 0, nread_0, nread_0+noutput_items, SYNC_CFO);
+  // See if there is a RX timestamp (only on first block or after underrun)
+  if(rx_tags.size()>0) {
+    size_t t = rx_tags.size()-1;
+
+    // Take the last timestamp
+    const uint64_t sample_offset = rx_tags[t].offset;  // distance from sample to timestamp in samples
+    const pmt::pmt_t newvalue = rx_tags[t].value;
+
+    // If the offset is greater than 0, this is a bit odd and complicated, so let's throw an error
+    // and if this is common, George will fix it.
+    if(sample_offset==0) {
+      std::cerr << "----- ERROR:  RX Time offset > 0, George will fix if this is common\n";
+      exit(-1);
+    }
+
+    std::cout << " \n Got CFO Value: " << newvalue << " \t " << sample_offset << std::endl;
+  } */
+
   // If the output is connected, send it the derotated symbols
   if(output_items.size() >= 1)
     d_derotated_output = (gr_complex *)output_items[0];
@@ -323,23 +351,53 @@ digital_ofdm_frame_sink::work (int noutput_items,
     if (sig[0]) {  // Found it, set up for header decode
       enter_have_sync();
 
-		// With a preamble, let's now check for the preamble sync timestamp
-		std::vector<gr_tag_t> rx_sync_tags;
-      		const uint64_t nread = this->nitems_read(1);
-		this->get_tags_in_range(rx_sync_tags, 1, nread, nread+input_items.size(), SYNC_TIME);
-		if(rx_sync_tags.size()>0) {
-			size_t t = rx_sync_tags.size()-1;
-			const pmt::pmt_t &value = rx_sync_tags[t].value;
-			lts_sync_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
-			lts_sync_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
-//			std::cout << "---- [FRAME_SINK_1]  nread: "<<nread<<"\n";
-			if(MY_DEBUG) {
-				std::cout << "---- [FRAME_SINK]  Timestamp received, lts = "<<lts_sync_secs<<"\t fts = "<<lts_sync_frac_of_secs<<"\n";
-			}
-		} else {
-			std::cerr << "---- [FRAME_SINK][STATE_HAVE_SYNC] Range: ["<<nread<<":"<<nread+input_items.size()<<")\n";
-			std::cerr << "---- [FRAME_SINK][STATE_HAVE_SYNC] Header received, with no sync timestamp? "<<"\n";
-		}
+      int port = 1;
+      // With a preamble, let's now check for the preamble sync timestamp
+      std::vector<gr_tag_t> rx_sync_tags;
+      const uint64_t nread1 = this->nitems_read(port);
+      this->get_tags_in_range(rx_sync_tags, port, nread1, nread1+input_items.size(), SYNC_TIME);
+      if(rx_sync_tags.size()>0) {
+        size_t t = rx_sync_tags.size()-1;
+        const pmt::pmt_t &value = rx_sync_tags[t].value;
+	lts_sync_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
+	lts_sync_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
+        if(MY_DEBUG) {
+	    std::cout << "---- [SINK]  Timestamp received, lts = "<<lts_sync_secs<<"\t fts = "<<lts_sync_frac_of_secs<<"\n";
+	}
+      } else {
+	std::cerr << "---- [SINK][STATE_HAVE_SYNC] Header received, with no sync timestamp? \t Range: ["<<nread1<<":"<<nread1+input_items.size()<<")\n";
+      }
+
+      this->get_tags_in_range(rx_sync_tags, port, nread1, nread1+input_items.size(), SYNC_CFO);
+      if(rx_sync_tags.size()>0) {
+        size_t t = rx_sync_tags.size()-1;
+        const pmt::pmt_t cfo_value = rx_sync_tags[t].value;
+        sync_cfo_value = pmt::pmt_to_double(cfo_value);
+        sync_cfo_valid = true;
+        if(false) {
+          std::cout << "---- [SINK] CFO receiverd, value: "<< sync_cfo_value <<" Range: [" << nread1 << ":" << nread1+input_items.size() <<") \n";
+        }
+      } else {
+        std::cerr << "---- [SINK] Preamble received, with no CFO? \t Range: ["<< nread1 <<":"<< nread1+input_items.size() << ") \n";
+      }
+
+      // With a preamble, let's now check for the preamble sync cfo
+      /**
+      port = 1;
+      std::vector<gr_tag_t> rx_sync_cfo_tags;
+      const uint64_t nread2 = this->nitems_read(port);
+      this->get_tags_in_range(rx_sync_cfo_tags, port, nread2, nread2+input_items.size(), SYNC_CFO);
+      if(rx_sync_cfo_tags.size()>0) {
+        size_t t = rx_sync_cfo_tags.size()-1;
+        const pmt::pmt_t cfo_value = rx_sync_cfo_tags[t].value;
+        sync_cfo_value = pmt::pmt_to_double(cfo_value);
+        sync_cfo_valid = true;
+        if(true) {
+          std::cout << "---- [SINK] CFO receiverd, value: "<< sync_cfo_value <<" Range: [" << nread2 << ":" << nread2+input_items.size() <<") \n";
+        }
+      } else {
+        std::cerr << "---- [SINK] Preamble received, with no CFO? \t Range: ["<< nread2 <<":"<< nread2+input_items.size() << ") \n";
+      } */
 
     }
     break;
@@ -398,6 +456,7 @@ digital_ofdm_frame_sink::work (int noutput_items,
 //		}
 	    std::cout << "---- [FRAME_SINK_2]  nread: "<<nitems_read(1)<<"\n";
 	    msg->set_timestamp(lts_sync_secs, lts_sync_frac_of_secs);
+            if(sync_cfo_valid)  msg->set_cfo(sync_cfo_value);
 	    d_target_queue->insert_tail(msg);		// send it
 	    msg.reset();  				// free it up
 	    
@@ -449,8 +508,9 @@ digital_ofdm_frame_sink::work (int noutput_items,
 //	}
 //	std::cout << "---- [FRAME_SINK_3]  nread: "<<nitems_read(1)<<"\t Packet Length: "<<d_packetlen<<"\n";
 	msg->set_timestamp(lts_sync_secs, lts_sync_frac_of_secs);
+        if(sync_cfo_valid)  msg->set_cfo(sync_cfo_value);
 	d_target_queue->insert_tail(msg);		// send it
-	msg.reset();  				// free it up
+	msg.reset();  				        // free it up
 	
 	enter_search();
 	break;

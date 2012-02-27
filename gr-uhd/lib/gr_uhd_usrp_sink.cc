@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <iostream>
 
-#define verbose 1
+#define verbose 0
 static const pmt::pmt_t SOB_KEY = pmt::pmt_string_to_symbol("tx_sob");
 static const pmt::pmt_t EOB_KEY = pmt::pmt_string_to_symbol("tx_eob");
 static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("tx_time");

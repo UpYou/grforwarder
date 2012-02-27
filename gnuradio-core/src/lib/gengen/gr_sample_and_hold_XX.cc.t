@@ -28,6 +28,9 @@
 
 #include <@NAME@.h>
 #include <gr_io_signature.h>
+#include <iostream>
+
+static const pmt::pmt_t SYNC_CFO = pmt::pmt_string_to_symbol("sync_cfo");
 
 @SPTR_NAME@
 gr_make_@BASE_NAME@ ()
@@ -55,6 +58,12 @@ int
   for (int i = 0; i < noutput_items; i++){
     if(ctrl[i]) {
       d_data = iptr[i];
+
+      const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
+      const pmt::pmt_t val = pmt::pmt_from_double(d_data);  // CFO value that we found the sync
+      int port = 0;
+      this->add_item_tag(port, nitems_written(port)+i+1, SYNC_CFO, val, _id); // note that we should add i + 1 since i indicates the real starting position
+      //std::cout<<"---- [SAMPLE_AND_HOLD] Adding a tag, offset: "<<nitems_written(port)+i+1<<" value:" << d_data<<" \n";
     }
     optr[i] = d_data;
   }

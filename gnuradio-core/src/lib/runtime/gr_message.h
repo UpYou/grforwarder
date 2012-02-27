@@ -55,6 +55,9 @@ class GR_CORE_API gr_message {
   uint64_t 	 d_timestamp_sec;		// the preamble sync time in seconds
   double 	 d_timestamp_frac_sec;	        // the preamble sync time's fractional seconds
 
+  bool           d_cfo_valid;                   // whether cfo value is valid
+  double         d_cfo;                         // the cfo value
+
   unsigned char	 *d_buf_start;	// start of allocated buffer
   unsigned char  *d_msg_start;	// where the msg starts
   unsigned char  *d_msg_end;	// one beyond end of msg
@@ -82,10 +85,13 @@ public:
   bool timestamp_valid() const { return d_timestamp_valid; }
   uint64_t timestamp_sec() const { return d_timestamp_sec; }
   double timestamp_frac_sec() const { return d_timestamp_frac_sec; }
+  bool cfo_valid() const { return d_cfo_valid; }
+  double cfo_value() const { return d_cfo; }
 
   void set_type(long type)   { d_type = type; }
   void set_arg1(double arg1) { d_arg1 = arg1; }
   void set_arg2(double arg2) { d_arg2 = arg2; }
+  void set_cfo(double cfo)   { d_cfo  = cfo;  d_cfo_valid = true; }
   void set_timestamp(uint64_t ps, double pfs);
 
   unsigned char *msg() const { return d_msg_start; }

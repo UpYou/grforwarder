@@ -454,7 +454,7 @@ digital_ofdm_frame_sink::work (int noutput_items,
 //			std::cerr << "---- [STATE_HAVE_SYNC] Range: ["<<nread<<":"<<nread+input_items.size()<<"]\n";
 //			std::cerr << "---- [STATE_HAVE_SYNC] Header received, with no sync timestamp? "<<"\n";
 //		}
-	    std::cout << "---- [FRAME_SINK_2]  nread: "<<nitems_read(1)<<"\n";
+	    // std::cout << "---- [FRAME_SINK_2]  nread: "<<nitems_read(1)<<"\n";
 	    msg->set_timestamp(lts_sync_secs, lts_sync_frac_of_secs);
             if(sync_cfo_valid)  msg->set_cfo(sync_cfo_value);
 	    d_target_queue->insert_tail(msg);		// send it

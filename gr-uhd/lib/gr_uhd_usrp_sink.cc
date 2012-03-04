@@ -27,7 +27,9 @@
 #include <stdio.h>
 #include <iostream>
 
-#define verbose 0
+#define verbose 1
+#define DEBUG   0
+
 static const pmt::pmt_t SOB_KEY = pmt::pmt_string_to_symbol("tx_sob");
 static const pmt::pmt_t EOB_KEY = pmt::pmt_string_to_symbol("tx_eob");
 static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("tx_time");
@@ -376,7 +378,6 @@ public:
         _metadata.has_time_spec = false;
 
         //process all of the tags found with the same count as tag0
-//        std::cout<<SOB_KEY<<"\t"<<TIME_KEY<<"\t"<<EOB_KEY<<std::endl;
         BOOST_FOREACH(const gr_tag_t &my_tag, _tags){
             const uint64_t my_tag_count = my_tag.offset;
             const pmt::pmt_t &key = my_tag.key;
@@ -391,8 +392,10 @@ public:
 
             //handle end of burst with a mini end of burst packet
             else if (pmt::pmt_equal(key, EOB_KEY)){
-//                printf(">>> USRP Get EOB Tag\n");
-//                std::cout<<"\t"<<key<<"\t offset: "<<my_tag_count<<std::endl;
+                if (DEBUG) {
+                    printf(">>> USRP Get EOB Tag\n");
+                    std::cout<<"\t"<<key<<"\t offset: "<<my_tag_count<<std::endl;
+                }
                 _metadata.end_of_burst = pmt::pmt_to_bool(value);
                 ninput_items = 1;
                 return;
@@ -400,28 +403,34 @@ public:
 
             //set the start of burst flag in the metadata
             else if (pmt::pmt_equal(key, SOB_KEY)){
-//                printf(">>> USRP Get SOB Tag\n");
-//                std::cout<<"\t"<<key<<"\t offset: "<<my_tag_count<<std::endl;
+                if (DEBUG) {
+                    printf(">>> USRP Get SOB Tag\n");
+                    std::cout<<"\t"<<key<<"\t offset: "<<my_tag_count<<std::endl;
+                }
                 _metadata.start_of_burst = pmt::pmt_to_bool(value);
             }
 
             //set the time specification in the metadata
             else if (pmt::pmt_equal(key, TIME_KEY)){
-//                printf(">>> USRP Get TIME Tag\n");
-//                std::cout<<"\t"<<key<<"\t"<<value<<"\t offset: "<<my_tag_count<<std::endl;
+                if (DEBUG) {
+                    printf(">>> USRP Get TIME Tag\n");
+                    std::cout<<"\t"<<key<<"\t"<<value<<"\t offset: "<<my_tag_count<<std::endl;
+                }
                 _metadata.has_time_spec = true;
                 _metadata.time_spec = uhd::time_spec_t(
                     pmt::pmt_to_uint64(pmt_tuple_ref(value, 0)),
                     pmt::pmt_to_double(pmt_tuple_ref(value, 1))
                 );
                 if (get_time_now() > _metadata.time_spec) {
-                    printf("WARN: UHD are not synced correctly\n");
+                    printf("WARNING: UHD are not synced correctly\n");
                     std::cout<<"\t now: "<<(this->get_time_now()).get_real_secs()<<" set: "<<_metadata.time_spec.get_real_secs()<<std::endl;
                 }
             }
             else {
-                printf(">>> I donot know which Tag???\n");
-                std::cout<<"\t"<<key<<std::endl;
+                if (DEBUG) {
+                    printf(">>> I donot know which Tag???\n");
+                    std::cout<<"\t"<<key<<"\t"<<value<<"\t offset: "<<my_tag_count<<std::endl;
+                }
             }
         }
     }

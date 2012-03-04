@@ -31,9 +31,7 @@
 #include <string.h>
 #include <stdio.h>
 
-static const pmt::pmt_t SOB_KEY  = pmt::pmt_string_to_symbol("tx_sob");
-static const pmt::pmt_t EOB_KEY  = pmt::pmt_string_to_symbol("tx_eob");
-static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("tx_time");
+static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
 
 digital_ofdm_mapper_bcv_sptr
 digital_make_ofdm_mapper_bcv (const std::vector<gr_complex> &constellation, unsigned int msgq_limit, 
@@ -48,9 +46,9 @@ digital_ofdm_mapper_bcv::digital_ofdm_mapper_bcv (const std::vector<gr_complex> 
 						  unsigned int occupied_carriers, unsigned int fft_length)
   : gr_sync_block ("ofdm_mapper_bcv",
 		   gr_make_io_signature (0, 0, 0),
-		   gr_make_io_signature2 (1, 2, sizeof(gr_complex)*fft_length, sizeof(char))),
+		   gr_make_io_signature3 (1, 3, sizeof(gr_complex)*fft_length, sizeof(char), sizeof(char))),
     d_constellation(constellation),
-    d_msgq(gr_make_msg_queue(msgq_limit)), d_msg_offset(0), d_eof(false),
+    d_msgq(gr_make_msg_queue(msgq_limit)), d_msg_offset(0), d_eof(false), d_time_state(false),
     d_occupied_carriers(occupied_carriers),
     d_fft_length(fft_length),
     d_bit_offset(0),
@@ -139,8 +137,6 @@ digital_ofdm_mapper_bcv::work(int noutput_items,
   
   unsigned int i=0;
 
-  const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
-
   //printf("OFDM BPSK Mapper:  ninput_items: %d   noutput_items: %d\n", ninput_items[0], noutput_items);
 
   if(d_eof) {
@@ -154,13 +150,14 @@ digital_ofdm_mapper_bcv::work(int noutput_items,
     d_pending_flag = 1;			   // new packet, write start of packet flag
 
     if( d_msg->timestamp_valid() ) {       // start of the message
+        const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
         const pmt::pmt_t val = pmt::pmt_make_tuple(
           pmt::pmt_from_uint64(d_msg->timestamp_sec()),      // FPGA clock in seconds that we found the sync
           pmt::pmt_from_double(d_msg->timestamp_frac_sec())  // FPGA clock in fractional seconds that we found the sync
         );
-        printf(">>> set timestamp, add SOB TIME tags at %d >>> %d \t %f \n", nitems_written(0), d_msg->timestamp_sec(), d_msg->timestamp_frac_sec());
-        this->add_item_tag(0, nitems_written(0), TIME_KEY, val, _id);
-        this->add_item_tag(0, nitems_written(0), SOB_KEY, pmt::PMT_T, _id);
+        if (false)
+          printf(">>> [ MAPPER ] add SYNC_TIME tags at %d | %f \n", nitems_written(0), d_msg->timestamp_sec()+d_msg->timestamp_frac_sec());
+        this->add_item_tag(0, nitems_written(0), SYNC_TIME, val, _id);
     }
     
     if((d_msg->length() == 0) && (d_msg->type() == 1)) {
@@ -170,8 +167,13 @@ digital_ofdm_mapper_bcv::work(int noutput_items,
   }
 
   char *out_flag = 0;
+  char *out_flag2 = 0;
   if(output_items.size() == 2)
     out_flag = (char *) output_items[1];
+  if(output_items.size() == 3) {
+    out_flag  = (char *) output_items[1];
+    out_flag2 = (char *) output_items[2];
+  }
   
 
   // Build a single symbol:
@@ -247,23 +249,24 @@ digital_ofdm_mapper_bcv::work(int noutput_items,
     if (d_msg->type() == 1)	        // type == 1 sets EOF
       d_eof = true;
 
-    bool state = d_msg->timestamp_valid();
+    d_time_state = d_msg->timestamp_valid();
     
     d_msg.reset();   			// finished packet, free message
     assert(d_bit_offset == 0);
-
-    if(state) {      // end of the message, fill some null samples
-//      out += d_fft_length;
-//      memset(out, 0, d_fft_length*sizeof(gr_complex));
-      this->add_item_tag(0, nitems_written(0)+1, EOB_KEY, pmt::PMT_T, _id);
-      printf(">>> adding end flag at %d >>> \n", nitems_written(0)+1);
-//      return 2;
-    }
   }
 
   if (out_flag)
     out_flag[0] = d_pending_flag;
   d_pending_flag = 0;
+
+  if (out_flag2) {
+    if (d_time_state) {                // if we use timestamp, output the end of one packet
+      out_flag2[0] = 1;
+      d_time_state = false;
+    } else {
+      out_flag2[0] = 0;
+    }
+  }
 
   return 1;  // produced symbol
 }

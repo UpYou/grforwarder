@@ -57,6 +57,7 @@ class GR_CORE_API gr_message {
 
   bool           d_cfo_valid;                   // whether cfo value is valid
   double         d_cfo;                         // the cfo value
+  double          d_snr;                         // the snr value
 
   unsigned char	 *d_buf_start;	// start of allocated buffer
   unsigned char  *d_msg_start;	// where the msg starts
@@ -87,11 +88,13 @@ public:
   double timestamp_frac_sec() const { return d_timestamp_frac_sec; }
   bool cfo_valid() const { return d_cfo_valid; }
   double cfo_value() const { return d_cfo; }
+  double snr_value() const { return d_snr; }
 
   void set_type(long type)   { d_type = type; }
   void set_arg1(double arg1) { d_arg1 = arg1; }
   void set_arg2(double arg2) { d_arg2 = arg2; }
   void set_cfo(double cfo)   { d_cfo  = cfo;  d_cfo_valid = true; }
+  void set_snr(double snr)    { d_snr = snr;}
   void set_timestamp(uint64_t ps, double pfs);
 
   unsigned char *msg() const { return d_msg_start; }

@@ -29,6 +29,12 @@
 #include <iostream>
 #include <string.h>
 
+#define DEBUG 0
+
+static const pmt::pmt_t SOB_KEY  = pmt::pmt_string_to_symbol("tx_sob");
+static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("tx_time");
+static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
+
 digital_ofdm_insert_preamble_sptr
 digital_make_ofdm_insert_preamble(int fft_length,
 				  const std::vector<std::vector<gr_complex> > &preamble)
@@ -41,12 +47,12 @@ digital_ofdm_insert_preamble::digital_ofdm_insert_preamble
        (int fft_length,
 	const std::vector<std::vector<gr_complex> > &preamble)
   : gr_block("ofdm_insert_preamble",
-	     gr_make_io_signature2(1, 2,
+	     gr_make_io_signature3(3, 3,
 				   sizeof(gr_complex)*fft_length,
-				   sizeof(char)),
-	     gr_make_io_signature2(1, 2,
+				   sizeof(char), sizeof(char)),
+	     gr_make_io_signature3(3, 3,
 				   sizeof(gr_complex)*fft_length,
-				   sizeof(char))),
+				   sizeof(char), sizeof(char))),
     d_fft_length(fft_length),
     d_preamble(preamble),
     d_state(ST_IDLE),
@@ -78,17 +84,27 @@ digital_ofdm_insert_preamble::general_work(int noutput_items,
 					   gr_vector_const_void_star &input_items,
 					   gr_vector_void_star &output_items)
 {
-  int ninput_items = ninput_items_v.size()==2?std::min(ninput_items_v[0], ninput_items_v[1]):ninput_items_v[0];
+  const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
+ 
+  if (DEBUG) {
+    std::vector<gr_tag_t> rx_tags;
+    this->get_tags_in_range(rx_tags, 0, nitems_read(0), nitems_read(0)+input_items.size(), SYNC_TIME);
+    // See if there is a RX timestamp (only on first block or after underrun)
+    if(rx_tags.size()>0) {
+      size_t t = rx_tags.size()-1;
+      const uint64_t my_tag_count = rx_tags[t].offset;
+      std::cout<<">>> [PR_SYNC ] tag count: "<< my_tag_count << " Range: ["<<nitems_read(0) << ":" <<nitems_read(0)+input_items.size() <<") \n";
+    }
+  }
+
+  int ninput_items = std::min(ninput_items_v[0], ninput_items_v[1]);
   const gr_complex *in_sym = (const gr_complex *) input_items[0];
-  const unsigned char *in_flag = 0;
-  if (input_items.size() == 2)
-    in_flag = (const unsigned char *) input_items[1];
+  const unsigned char *in_flag = (const unsigned char *) input_items[1];
+  const unsigned char *in_flag2 = (const unsigned char *) input_items[2];
 
   gr_complex *out_sym = (gr_complex *) output_items[0];
-  unsigned char *out_flag = 0;
-  if (output_items.size() == 2)
-    out_flag = (unsigned char *) output_items[1];
-
+  unsigned char *out_flag = (unsigned char *) output_items[1];
+  unsigned char *out_flag2 = (unsigned char *) output_items[2];
 
   int no = 0;	// number items output
   int ni = 0;	// number items read from input
@@ -98,6 +114,8 @@ digital_ofdm_insert_preamble::general_work(int noutput_items,
   do { if (out_flag) 				\
           out_flag[no] = d_pending_flag; 	\
        d_pending_flag = 0; 			\
+       if (out_flag2)                           \
+          out_flag2[no] = in_flag2[ni];         \
   } while(0)
 
 
@@ -120,6 +138,34 @@ digital_ofdm_insert_preamble::general_work(int noutput_items,
 	memcpy(&out_sym[no * d_fft_length],
 	       &d_preamble[d_nsymbols_output][0],
 	       d_fft_length*sizeof(gr_complex));
+
+        /* -------------------------------------------------------- */
+        // add by lzyou: get sync time, then add SOB, TIME tags
+        std::vector<gr_tag_t> rx_sync_tags;
+        // NOTE: we must add ni
+        this->get_tags_in_range(rx_sync_tags, 0, nitems_read(0)+ni, nitems_read(0)+ni+input_items.size(), SYNC_TIME);
+        
+        if(rx_sync_tags.size()>0) {
+            size_t t = rx_sync_tags.size()-1;
+            const pmt::pmt_t &value = rx_sync_tags[t].value;
+	    uint64_t sync_secs = pmt::pmt_to_uint64(pmt_tuple_ref(value, 0));
+	    double sync_frac_of_secs = pmt::pmt_to_double(pmt_tuple_ref(value,1));
+
+            // NOTE: we must add no
+            this->add_item_tag(0, nitems_written(0)+no, SOB_KEY, pmt::PMT_T, _id);
+            this->add_item_tag(0, nitems_written(0)+no, TIME_KEY, value, _id);
+            if (DEBUG) {
+                std::cout << ">>> [PREAMBLE] timestamp received at " << rx_sync_tags[t].offset << " | "<<(double)(sync_secs+sync_frac_of_secs) << std::endl;
+                std::cout << ">>> [PREAMBLE] add SOB, TIME tags at " << nitems_written(0)+no << " | " << sync_secs+sync_frac_of_secs << std::endl;
+                std::cout << ">>> [PREAMBLE] no = " << no << " | ni = " << ni << std::endl;
+            }
+        } else {
+            if (DEBUG) {
+                std::cout << ">>> [PREAMBLE] No Timestamp??? Range: ["<<nitems_read(0) << ":" <<nitems_read(0)+input_items.size() <<") \n";
+                std::cout << ">>> [PREAMBLE] no = " << no << " | ni = " << ni  << " | d_nsymbols_output = " << d_nsymbols_output << " | " << (int) d_preamble.size() << std::endl;
+            }
+        }
+        /* -------------------------------------------------------- */
 
 	write_out_flag();
 	no++;

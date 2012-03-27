@@ -55,11 +55,13 @@ public:
   double timestamp_frac_sec() const { return d_timestamp_frac_sec; }
   bool cfo_valid() const { return d_cfo_valid; }
   double cfo_value() const { return d_cfo; }
+  double snr_value() const { return d_snr; }
 
   void set_type(long type)   { d_type = type; }
   void set_arg1(double arg1) { d_arg1 = arg1; }
   void set_arg2(double arg2) { d_arg2 = arg2; }
   void set_cfo(double cfo)   { d_cfo  = cfo; d_cfo_valid = true; }
+  void set_snr(double snr)    { d_snr = snr;}
   void set_timestamp(uint64_t ps, double pfs);
 
   size_t length() const;

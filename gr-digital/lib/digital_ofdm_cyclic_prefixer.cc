@@ -39,7 +39,7 @@ digital_make_ofdm_cyclic_prefixer (size_t input_size, size_t output_size)
 digital_ofdm_cyclic_prefixer::digital_ofdm_cyclic_prefixer (size_t input_size,
 							    size_t output_size)
   : gr_sync_interpolator ("ofdm_cyclic_prefixer",
-			  gr_make_io_signature2 (2, 2, input_size*sizeof(gr_complex), sizeof(char)),
+			  gr_make_io_signature2 (1, 2, input_size*sizeof(gr_complex), sizeof(char)),
 			  gr_make_io_signature (1, 1, sizeof(gr_complex)),
 			  output_size), 
     d_input_size(input_size),
@@ -54,7 +54,9 @@ digital_ofdm_cyclic_prefixer::work (int noutput_items,
 				    gr_vector_void_star &output_items)
 {
   gr_complex *in = (gr_complex *) input_items[0];
-  const unsigned char *in_flag = (const unsigned char *) input_items[1];  // the flag indicates whether one packet ends
+  const unsigned char *in_flag = 0;
+  if (input_items.size() == 2)
+    in_flag = (const unsigned char *) input_items[1];  // the flag indicates whether one packet ends
   gr_complex *out = (gr_complex *) output_items[0];
   size_t cp_size = d_output_size - d_input_size;
   unsigned int i=0, j=0;
@@ -69,11 +71,13 @@ digital_ofdm_cyclic_prefixer::work (int noutput_items,
     out[i] = in[j];
   }
 
-  if (in_flag[0] & 0x1){
-    const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
-    this->add_item_tag(0, nitems_written(0)+d_output_size-1, EOB_KEY, pmt::PMT_T, _id);
-    if (false)
-      printf(">>> [CP] add EOB flag at %d >>> \n", nitems_written(0)+d_output_size-1);
+  if (in_flag) {
+    if (in_flag[0] & 0x1){
+      const pmt::pmt_t _id = pmt::pmt_string_to_symbol(this->name());
+      this->add_item_tag(0, nitems_written(0)+d_output_size-1, EOB_KEY, pmt::PMT_T, _id);
+      if (false)
+        printf(">>> [CP] add EOB flag at %d >>> \n", nitems_written(0)+d_output_size-1);
+    }
   }
 
   return d_output_size;

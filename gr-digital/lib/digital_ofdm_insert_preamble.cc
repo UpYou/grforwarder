@@ -47,12 +47,12 @@ digital_ofdm_insert_preamble::digital_ofdm_insert_preamble
        (int fft_length,
 	const std::vector<std::vector<gr_complex> > &preamble)
   : gr_block("ofdm_insert_preamble",
-	     gr_make_io_signature3(3, 3,
+	     gr_make_io_signature2(1, 2,
 				   sizeof(gr_complex)*fft_length,
-				   sizeof(char), sizeof(char)),
-	     gr_make_io_signature3(3, 3,
+				   sizeof(char)),
+	     gr_make_io_signature2(1, 2,
 				   sizeof(gr_complex)*fft_length,
-				   sizeof(char), sizeof(char))),
+				   sizeof(char))),
     d_fft_length(fft_length),
     d_preamble(preamble),
     d_state(ST_IDLE),
@@ -97,6 +97,7 @@ digital_ofdm_insert_preamble::general_work(int noutput_items,
     }
   }
 
+/*
   int ninput_items = std::min(ninput_items_v[0], ninput_items_v[1]);
   const gr_complex *in_sym = (const gr_complex *) input_items[0];
   const unsigned char *in_flag = (const unsigned char *) input_items[1];
@@ -105,11 +106,23 @@ digital_ofdm_insert_preamble::general_work(int noutput_items,
   gr_complex *out_sym = (gr_complex *) output_items[0];
   unsigned char *out_flag = (unsigned char *) output_items[1];
   unsigned char *out_flag2 = (unsigned char *) output_items[2];
+*/
+
+  int ninput_items = ninput_items_v.size()==2?std::min(ninput_items_v[0], ninput_items_v[1]):ninput_items_v[0];
+  const gr_complex *in_sym = (const gr_complex *) input_items[0];
+  const unsigned char *in_flag = 0;
+  if (input_items.size() == 2)
+    in_flag = (const unsigned char *) input_items[1];
+
+  gr_complex *out_sym = (gr_complex *) output_items[0];
+  unsigned char *out_flag = 0;
+  if (output_items.size() == 2)
+    out_flag = (unsigned char *) output_items[1];
 
   int no = 0;	// number items output
   int ni = 0;	// number items read from input
 
-
+/*
 #define write_out_flag() 			\
   do { if (out_flag) 				\
           out_flag[no] = d_pending_flag; 	\
@@ -117,7 +130,13 @@ digital_ofdm_insert_preamble::general_work(int noutput_items,
        if (out_flag2)                           \
           out_flag2[no] = in_flag2[ni];         \
   } while(0)
+*/
 
+#define write_out_flag() 			\
+  do { if (out_flag) 				\
+          out_flag[no] = d_pending_flag; 	\
+       d_pending_flag = 0; 			\
+  } while(0)
 
   while (no < noutput_items && ni < ninput_items){
     switch(d_state){

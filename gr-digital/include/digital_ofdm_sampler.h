@@ -31,7 +31,7 @@ typedef boost::shared_ptr<digital_ofdm_sampler> digital_ofdm_sampler_sptr;
 
 DIGITAL_API digital_ofdm_sampler_sptr digital_make_ofdm_sampler (unsigned int fft_length, 
 						     unsigned int symbol_length,
-						     unsigned int bandwidth,
+						     unsigned int bandwidth=100, // lzyou: default value means nothing
 						     unsigned int timeout=1000);
 
 /*!

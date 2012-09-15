@@ -24,7 +24,7 @@ GR_SWIG_BLOCK_MAGIC(digital,ofdm_sampler)
 
   digital_ofdm_sampler_sptr digital_make_ofdm_sampler (unsigned int fft_length, 
 						       unsigned int symbol_length,
-                                                       unsigned int bandwidth,
+                                                       unsigned int bandwidth=100, // lzyou: default value means nothing
 						       unsigned int timeout=1000);
 
 class digital_ofdm_sampler : public gr_sync_block

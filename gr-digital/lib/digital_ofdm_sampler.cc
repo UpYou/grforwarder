@@ -98,9 +98,9 @@ digital_ofdm_sampler::general_work (int noutput_items,
     const pmt::pmt_t &value = rx_time_tags[t].value;
 
     // If the offset is greater than 0, this is a bit odd and complicated, so let's throw an error
-    // and if this is common, George will fix it.
+    // and if this is common, @lzyou will fix it.
     if(sample_offset>0) {
-      std::cerr << "----- ERROR:  RX Time offset > 0, George will fix if this is common\n";
+      std::cerr << "----- ERROR:  Got first timestamp in pos > 0, @lzyou will fix if this is common\n";
       exit(-1);
     }
 		

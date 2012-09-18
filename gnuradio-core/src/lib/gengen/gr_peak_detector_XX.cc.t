@@ -69,6 +69,10 @@ int
 
   //printf("noutput_items %d\n",noutput_items);
   while(i < noutput_items) {
+    //const uint64_t nread = this->nitems_read(0);
+    //if(nread < 500)   // avoid hardware peak at the beginning
+    //  continue;
+
     if(state == 0) {  // below threshold
       if(iptr[i] > d_avg*d_threshold_factor_rise) {
 	state = 1;

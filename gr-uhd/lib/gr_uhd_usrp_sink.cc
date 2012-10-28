@@ -418,8 +418,8 @@ public:
                 }
                 _metadata.has_time_spec = true;
                 _metadata.time_spec = uhd::time_spec_t(
-                    pmt::pmt_to_uint64(pmt_tuple_ref(value, 0)),
-                    pmt::pmt_to_double(pmt_tuple_ref(value, 1))
+                    pmt::pmt_to_uint64(pmt::pmt_tuple_ref(value, 0)),
+                    pmt::pmt_to_double(pmt::pmt_tuple_ref(value, 1))
                 );
                 if (get_time_now() > _metadata.time_spec) {
                     printf("WARNING: UHD are not synced correctly\n");

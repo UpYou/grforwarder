@@ -31,7 +31,7 @@
 class gr_message_source;
 typedef boost::shared_ptr<gr_message_source> gr_message_source_sptr;
 
-GR_CORE_API gr_message_source_sptr gr_make_message_source (size_t itemsize, int msgq_limit=0);
+GR_CORE_API gr_message_source_sptr gr_make_message_source (size_t itemsize, int msgq_limit=0, bool flag=false);
 GR_CORE_API gr_message_source_sptr gr_make_message_source (size_t itemsize, gr_msg_queue_sptr msgq);
 
 /*!
@@ -46,14 +46,15 @@ class GR_CORE_API gr_message_source : public gr_sync_block
   gr_message_sptr	d_msg;
   unsigned		d_msg_offset;
   bool			d_eof;
+  bool                  d_flag;     // flag for sending TIME_KEY or SYNC_TIME
 
   friend GR_CORE_API gr_message_source_sptr
-  gr_make_message_source(size_t itemsize, int msgq_limit);
+  gr_make_message_source(size_t itemsize, int msgq_limit, bool flag);
   friend GR_CORE_API gr_message_source_sptr
   gr_make_message_source(size_t itemsize, gr_msg_queue_sptr msgq);
 
  protected:
-  gr_message_source (size_t itemsize, int msgq_limit);
+  gr_message_source (size_t itemsize, int msgq_limit, bool flag);
   gr_message_source (size_t itemsize, gr_msg_queue_sptr msgq);
 
  public:

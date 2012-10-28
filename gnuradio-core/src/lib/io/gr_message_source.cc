@@ -34,16 +34,19 @@
 #include <stdexcept>
 #include <string.h>
 
+#define VERBOSE 0
+
 static const pmt::pmt_t SOB_KEY  = pmt::pmt_string_to_symbol("tx_sob");
 static const pmt::pmt_t EOB_KEY  = pmt::pmt_string_to_symbol("tx_eob");
 static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("tx_time");
+static const pmt::pmt_t SYNC_TIME = pmt::pmt_string_to_symbol("sync_time");
 
 // public constructor that returns a shared_ptr
 
 gr_message_source_sptr
-gr_make_message_source(size_t itemsize, int msgq_limit)
+gr_make_message_source(size_t itemsize, int msgq_limit, bool flag)
 {
-  return gnuradio::get_initial_sptr(new gr_message_source(itemsize, msgq_limit));
+  return gnuradio::get_initial_sptr(new gr_message_source(itemsize, msgq_limit, flag));
 }
 
 // public constructor that takes existing message queue
@@ -53,11 +56,11 @@ gr_make_message_source(size_t itemsize, gr_msg_queue_sptr msgq)
   return gnuradio::get_initial_sptr(new gr_message_source(itemsize, msgq));
 }
 
-gr_message_source::gr_message_source (size_t itemsize, int msgq_limit)
+gr_message_source::gr_message_source (size_t itemsize, int msgq_limit, bool flag)
   : gr_sync_block("message_source",
 		  gr_make_io_signature(0, 0, 0),
 		  gr_make_io_signature(1, 1, itemsize)),
-    d_itemsize(itemsize), d_msgq(gr_make_msg_queue(msgq_limit)), d_msg_offset(0), d_eof(false)
+    d_itemsize(itemsize), d_msgq(gr_make_msg_queue(msgq_limit)), d_msg_offset(0), d_eof(false), d_flag(flag)
 {
 }
 
@@ -94,8 +97,12 @@ gr_message_source::work(int noutput_items,
           pmt::pmt_from_uint64(d_msg->timestamp_sec()),      // FPGA clock in seconds that we found the sync
           pmt::pmt_from_double(d_msg->timestamp_frac_sec())  // FPGA clock in fractional seconds that we found the sync
         );
-//        printf(">>> set SOB/TIME tag, timestamp %f at %d | noutput_items = %d | d_itemsize = %d \n", d_msg->timestamp_sec()+d_msg->timestamp_frac_sec(), nitems_written(0)+nn, noutput_items, d_itemsize);
-        this->add_item_tag(0, nitems_written(0)+nn, TIME_KEY, val, _id);  // nn denotes the starting point of a message
+        if(VERBOSE)
+          printf(">>> set SOB/TIME tag, timestamp %f at %d | noutput_items = %d | d_itemsize = %d | d_flag = %d\n", d_msg->timestamp_sec()+d_msg->timestamp_frac_sec(), nitems_written(0)+nn, noutput_items, d_itemsize, d_flag);
+        if(d_flag)
+          this->add_item_tag(0, nitems_written(0)+nn, SYNC_TIME, val, _id);  // nn denotes the starting point of a message
+        else  // default option
+          this->add_item_tag(0, nitems_written(0)+nn, TIME_KEY, val, _id);  // nn denotes the starting point of a message
         this->add_item_tag(0, nitems_written(0)+nn, SOB_KEY, pmt::PMT_T, _id);
       }
 
@@ -108,13 +115,15 @@ gr_message_source::work(int noutput_items,
 
       if (d_msg_offset == d_msg->length()){
         if(d_msg->timestamp_valid()) {        // end of the message
-          this->add_item_tag(0, nitems_written(0)+nn-1, EOB_KEY, pmt::PMT_T, _id);  // nn-1 denotes the end point of a message
-//          printf(" >>> set EOB tag at %d | d_msg_offset = %d | d_msg_length = %d \n", nitems_written(0)+nn-1, d_msg_offset, d_msg->length());
+          if (!d_flag) {
+            if(VERBOSE)
+              printf(" >>> set *EOB* tag at %d | d_msg_offset = %d | d_msg_length = %d \n", nitems_written(0)+nn-1, d_msg_offset, d_msg->length());
+            this->add_item_tag(0, nitems_written(0)+nn-1, EOB_KEY, pmt::PMT_T, _id);  // nn-1 denotes the end point of a message
+          }
         }
 
 	if (d_msg->type() == 1) {	           // type == 1 sets EOF
 	  d_eof = true;
-//          printf(" >>> set eof true | nn = %d \n", nn);
         }
 	d_msg.reset();
       }

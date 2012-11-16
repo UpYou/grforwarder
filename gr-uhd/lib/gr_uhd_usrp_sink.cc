@@ -333,7 +333,7 @@ public:
         );
         if(verbose) std::cout << boost::format("Sent packet: %5u samples | SOB: %d | TIME: %d |EOB: %d | ninput_items: %d") % num_sent % _metadata.start_of_burst % _metadata.has_time_spec % _metadata.end_of_burst % ninput_items << std::endl;
         if(_metadata.end_of_burst == true) {
-            std::cout << "Waiting for async burst ACK... " << std::flush;
+            if(verbose) std::cout << "Waiting for async burst ACK... " << std::flush;
             uhd::async_metadata_t async_md;
             bool got_async_burst_ack = false;
             //loop through all messages for the ACK packet (may have underflow messages in queue)
@@ -341,7 +341,7 @@ public:
             while (not got_async_burst_ack and _dev->get_device()->recv_async_msg(async_md, 1)){
                 got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
             }
-            std::cout << (got_async_burst_ack? "success" : "fail") << std::endl;
+            if(verbose) std::cout << (got_async_burst_ack? "success" : "fail") << std::endl;
         }
         #else
         const size_t num_sent = _dev->get_device()->send(
@@ -418,12 +418,19 @@ public:
                 }
                 _metadata.has_time_spec = true;
                 _metadata.time_spec = uhd::time_spec_t(
-                    pmt::pmt_to_uint64(pmt_tuple_ref(value, 0)),
-                    pmt::pmt_to_double(pmt_tuple_ref(value, 1))
+                    pmt::pmt_to_uint64(pmt::pmt_tuple_ref(value, 0)),
+                    pmt::pmt_to_double(pmt::pmt_tuple_ref(value, 1))
                 );
                 if (get_time_now() > _metadata.time_spec) {
                     printf("WARNING: UHD are not synced correctly\n");
-                    std::cout<<"\t now: "<<(this->get_time_now()).get_real_secs()<<" set: "<<_metadata.time_spec.get_real_secs()<<std::endl;
+                    std::cout.precision(16);
+                    std::cout << "\t now: "<<(this->get_time_now().get_full_secs()+this->get_time_now().get_frac_secs())<<" set: "<<value<<std::endl;
+                }
+                else {
+                    if(verbose) {
+                        std::cout.precision(16);
+                        std::cout << "\t now: "<<(this->get_time_now().get_full_secs()+this->get_time_now().get_frac_secs())<<" set: "<<value<<std::endl;
+                    }
                 }
             }
             else {

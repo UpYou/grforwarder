@@ -54,10 +54,11 @@ class GR_CORE_API gr_message {
   bool		 d_timestamp_valid;		// whether the timestamp is valid
   double 	 d_timestamp_sec;		// the preamble sync time in seconds
   double 	 d_timestamp_frac_sec;	        // the preamble sync time's fractional seconds
-
   bool           d_cfo_valid;                   // whether cfo value is valid
   double         d_cfo;                         // the cfo value
-  double          d_snr;                         // the snr value
+  double         d_snr;                         // the snr value for RawOFDM
+  std::vector<double> d_power_list;             // the effective power values for PNC
+  std::vector<double> d_power_list2;            // the power values for PNC
 
   unsigned char	 *d_buf_start;	// start of allocated buffer
   unsigned char  *d_msg_start;	// where the msg starts
@@ -89,12 +90,16 @@ public:
   bool cfo_valid() const { return d_cfo_valid; }
   double cfo_value() const { return d_cfo; }
   double snr_value() const { return d_snr; }
+  std::vector<double> power_list() const { return d_power_list; }
+  std::vector<double> power_list2() const { return d_power_list2; }
 
   void set_type(long type)   { d_type = type; }
   void set_arg1(double arg1) { d_arg1 = arg1; }
   void set_arg2(double arg2) { d_arg2 = arg2; }
   void set_cfo(double cfo)   { d_cfo  = cfo;  d_cfo_valid = true; }
   void set_snr(double snr)    { d_snr = snr;}
+  void set_power_list(std::vector<double> power_list) { d_power_list = power_list; }
+  void set_power_list2(std::vector<double> power_list) { d_power_list2 = power_list; }
   void set_timestamp(double ps, double pfs);
 
   unsigned char *msg() const { return d_msg_start; }

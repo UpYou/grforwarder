@@ -51,9 +51,11 @@ class GR_CORE_API gr_message {
   double	  d_arg1;	// optional arg1
   double 	  d_arg2;	// optional arg2
 
-  bool		 d_timestamp_valid;		// whether the timestamp is valid
-  double 	 d_timestamp_sec;		// the preamble sync time in seconds
-  double 	 d_timestamp_frac_sec;	        // the preamble sync time's fractional seconds
+  bool		 d_timestamp_valid;					// whether the timestamp is valid
+  double 	 d_timestamp_sec;					// the preamble sync time in seconds
+  double 	 d_timestamp_frac_sec;	        	// the preamble sync time's fractional seconds
+  double     d_pc_time_secs;					// the preamble sync pc time in seconds
+  double     d_pc_time_frac;					// the preamble sync pc time in fractional secons
   bool           d_cfo_valid;                   // whether cfo value is valid
   double         d_cfo;                         // the cfo value
   double         d_snr;                         // the snr value for RawOFDM
@@ -87,6 +89,8 @@ public:
   bool timestamp_valid() const { return d_timestamp_valid; }
   double timestamp_sec() const { return d_timestamp_sec; }
   double timestamp_frac_sec() const { return d_timestamp_frac_sec; }
+  double pctime_sec() const { return d_pc_time_secs; }
+  double pctime_frac_sec() const { return d_pc_time_frac; }
   bool cfo_valid() const { return d_cfo_valid; }
   double cfo_value() const { return d_cfo; }
   double snr_value() const { return d_snr; }
@@ -101,6 +105,7 @@ public:
   void set_power_list(std::vector<double> power_list) { d_power_list = power_list; }
   void set_power_list2(std::vector<double> power_list) { d_power_list2 = power_list; }
   void set_timestamp(double ps, double pfs);
+  void set_pctime(double ps, double pfs) { d_pc_time_secs = ps; d_pc_time_frac = pfs; }
 
   unsigned char *msg() const { return d_msg_start; }
   size_t length() const      { return d_msg_end - d_msg_start; }

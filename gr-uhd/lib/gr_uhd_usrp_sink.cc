@@ -27,7 +27,8 @@
 #include <stdio.h>
 #include <iostream>
 
-#define verbose 0
+#define verbose 1 
+#define verbose2 0
 #define DEBUG   0
 
 static const pmt::pmt_t SOB_KEY = pmt::pmt_string_to_symbol("tx_sob");
@@ -331,7 +332,7 @@ public:
         const size_t num_sent = _tx_stream->send(
             input_items, ninput_items, _metadata, 1.0
         );
-        if(verbose) std::cout << boost::format("Sent packet: %5u samples | SOB: %d | TIME: %d |EOB: %d | ninput_items: %d") % num_sent % _metadata.start_of_burst % _metadata.has_time_spec % _metadata.end_of_burst % ninput_items << std::endl;
+        if(verbose && verbose2) std::cout << boost::format("Sent packet: %5u samples | SOB: %d | TIME: %d |EOB: %d | ninput_items: %d") % num_sent % _metadata.start_of_burst % _metadata.has_time_spec % _metadata.end_of_burst % ninput_items << std::endl;
         if(_metadata.end_of_burst == true) {
             if(verbose) std::cout << "Waiting for async burst ACK... " << std::flush;
             uhd::async_metadata_t async_md;
@@ -424,12 +425,12 @@ public:
                 if (get_time_now() > _metadata.time_spec) {
                     printf("WARNING: UHD are not synced correctly\n");
                     std::cout.precision(16);
-                    std::cout << "\t now: "<<(this->get_time_now().get_full_secs()+this->get_time_now().get_frac_secs())<<" set: "<<value<<std::endl;
+                    std::cout << "\t now: "<<(this->get_time_now().get_full_secs()+this->get_time_now().get_frac_secs())<<" set: "<<_metadata.time_spec.get_real_secs()<<std::endl;
                 }
                 else {
                     if(verbose) {
                         std::cout.precision(16);
-                        std::cout << "\t now: "<<(this->get_time_now().get_full_secs()+this->get_time_now().get_frac_secs())<<" set: "<<value<<std::endl;
+                        std::cout << "\t now: "<<(this->get_time_now().get_full_secs()+this->get_time_now().get_frac_secs())<<" set: "<<_metadata.time_spec.get_real_secs()<<std::endl;
                     }
                 }
             }

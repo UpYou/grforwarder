@@ -44,7 +44,7 @@ gr_make_message_from_string(const std::string s, long type, double arg1, double 
   return m;
 }
 
-void gr_message::set_timestamp(double ps, double pfs) {
+void gr_message::set_timestamp(uint64_t ps, double pfs) {
 	d_timestamp_valid=true;
 	d_timestamp_sec=ps;
 	d_timestamp_frac_sec=pfs;

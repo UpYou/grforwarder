@@ -60,6 +60,7 @@ public:
   std::vector<double> power_list() const { return d_power_list; }
   std::vector<double> power_list2() const { return d_power_list2; }
   std::vector<double> cfo_values() const { return d_cfo_list; }
+  uint64_t get_timestamp_samples() const { return d_passed_samples; }
 
   void set_type(long type)   { d_type = type; }
   void set_arg1(double arg1) { d_arg1 = arg1; }
@@ -69,6 +70,7 @@ public:
   void set_power_list(std::vector<double> power_list) { d_power_list = power_list; }
   void set_power_list2(std::vector<double> power_list) { d_power_list2 = power_list; }
   void set_timestamp(uint64_t ps, double pfs);
+  void set_timestamp_samples(uint64_t passed_samples) { d_passed_samples = passed_samples; }
   void set_pctime(double ps, double pfs) { d_pc_time_secs = ps; d_pc_time_secs = pfs; }
 
   size_t length() const;

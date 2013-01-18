@@ -25,6 +25,7 @@
 #include <gr_core_api.h>
 #include <gr_types.h>
 #include <string>
+#include <stdint.h>
 
 class gr_message;
 typedef boost::shared_ptr<gr_message> gr_message_sptr;
@@ -52,7 +53,7 @@ class GR_CORE_API gr_message {
   double 	  d_arg2;	// optional arg2
 
   bool		 d_timestamp_valid;					// whether the timestamp is valid
-  double 	 d_timestamp_sec;					// the preamble sync time in seconds
+  uint64_t 	 d_timestamp_sec;					// the preamble sync time in seconds
   double 	 d_timestamp_frac_sec;	        	// the preamble sync time's fractional seconds
   double     d_pc_time_secs;					// the preamble sync pc time in seconds
   double     d_pc_time_frac;					// the preamble sync pc time in fractional secons
@@ -66,6 +67,8 @@ class GR_CORE_API gr_message {
   unsigned char  *d_msg_start;	// where the msg starts
   unsigned char  *d_msg_end;	// one beyond end of msg
   unsigned char  *d_buf_end;	// one beyond end of allocated buffer
+
+  uint64_t        d_passed_samples;				// the pramble sync number of passed samples
 
   gr_message (long type, double arg1, double arg2, size_t length);
 
@@ -87,7 +90,7 @@ public:
   double arg1() const { return d_arg1; }
   double arg2() const { return d_arg2; }
   bool timestamp_valid() const { return d_timestamp_valid; }
-  double timestamp_sec() const { return d_timestamp_sec; }
+  uint64_t timestamp_sec() const { return d_timestamp_sec; }
   double timestamp_frac_sec() const { return d_timestamp_frac_sec; }
   double pctime_sec() const { return d_pc_time_secs; }
   double pctime_frac_sec() const { return d_pc_time_frac; }
@@ -96,6 +99,7 @@ public:
   std::vector<double> power_list() const { return d_power_list; }
   std::vector<double> power_list2() const { return d_power_list2; }
   std::vector<double> cfo_values() const { return d_cfo_list; }
+  uint64_t get_timestamp_samples() const { return d_passed_samples; }
 
   void set_type(long type)   { d_type = type; }
   void set_arg1(double arg1) { d_arg1 = arg1; }
@@ -104,7 +108,8 @@ public:
   void set_snr(double snr)    { d_snr = snr;}
   void set_power_list(std::vector<double> power_list) { d_power_list = power_list; }
   void set_power_list2(std::vector<double> power_list) { d_power_list2 = power_list; }
-  void set_timestamp(double ps, double pfs);
+  void set_timestamp(uint64_t ps, double pfs);
+  void set_timestamp_samples(uint64_t passed_samples) { d_passed_samples = passed_samples; }
   void set_pctime(double ps, double pfs) { d_pc_time_secs = ps; d_pc_time_frac = pfs; }
 
   unsigned char *msg() const { return d_msg_start; }

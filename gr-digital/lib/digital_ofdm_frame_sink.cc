@@ -456,7 +456,9 @@ digital_ofdm_frame_sink::work (int noutput_items,
 //		}
 	    // std::cout << "---- [FRAME_SINK_2]  nread: "<<nitems_read(1)<<"\n";
 	    msg->set_timestamp(lts_sync_secs, lts_sync_frac_of_secs);
-            if(sync_cfo_valid)  msg->set_cfo(sync_cfo_value);
+	    std::vector<double> sync_cfo;
+	    sync_cfo.push_back(sync_cfo_value);
+        if(sync_cfo_valid)  msg->set_cfo(sync_cfo);
 	    d_target_queue->insert_tail(msg);		// send it
 	    msg.reset();  				// free it up
 	    
@@ -508,7 +510,9 @@ digital_ofdm_frame_sink::work (int noutput_items,
 //	}
 //	std::cout << "---- [FRAME_SINK_3]  nread: "<<nitems_read(1)<<"\t Packet Length: "<<d_packetlen<<"\n";
 	msg->set_timestamp(lts_sync_secs, lts_sync_frac_of_secs);
-        if(sync_cfo_valid)  msg->set_cfo(sync_cfo_value);
+	std::vector<double> sync_cfo;
+    sync_cfo.push_back(sync_cfo_value);
+    if(sync_cfo_valid)  msg->set_cfo(sync_cfo);
 	d_target_queue->insert_tail(msg);		// send it
 	msg.reset();  				        // free it up
 	

@@ -56,15 +56,15 @@ public:
   double pctime_sec() const { return d_pc_time_secs; }
   double pctime_frac_sec() const { return d_pc_time_frac; }
   bool cfo_valid() const { return d_cfo_valid; }
-  double cfo_value() const { return d_cfo; }
   double snr_value() const { return d_snr; }
   std::vector<double> power_list() const { return d_power_list; }
   std::vector<double> power_list2() const { return d_power_list2; }
+  std::vector<double> cfo_values() const { return d_cfo_list; }
 
   void set_type(long type)   { d_type = type; }
   void set_arg1(double arg1) { d_arg1 = arg1; }
   void set_arg2(double arg2) { d_arg2 = arg2; }
-  void set_cfo(double cfo)   { d_cfo  = cfo; d_cfo_valid = true; }
+  void set_cfo(std::vector<double> cfo_list) { d_cfo_list = cfo_list; d_cfo_valid = true; }
   void set_snr(double snr)    { d_snr = snr;}
   void set_power_list(std::vector<double> power_list) { d_power_list = power_list; }
   void set_power_list2(std::vector<double> power_list) { d_power_list2 = power_list; }

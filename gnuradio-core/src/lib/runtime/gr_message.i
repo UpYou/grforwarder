@@ -57,6 +57,7 @@ public:
   double pctime_frac_sec() const { return d_pc_time_frac; }
   bool cfo_valid() const { return d_cfo_valid; }
   double snr_value() const { return d_snr; }
+  std::vector<double> get_snr_values() const { return d_snr_list; }
   std::vector<double> power_list() const { return d_power_list; }
   std::vector<double> power_list2() const { return d_power_list2; }
   std::vector<double> cfo_values() const { return d_cfo_list; }
@@ -67,6 +68,7 @@ public:
   void set_arg2(double arg2) { d_arg2 = arg2; }
   void set_cfo(std::vector<double> cfo_list) { d_cfo_list = cfo_list; d_cfo_valid = true; }
   void set_snr(double snr)    { d_snr = snr;}
+  void set_snr_list(std::vector<double> snr_list) { d_snr_list = snr_list; };
   void set_power_list(std::vector<double> power_list) { d_power_list = power_list; }
   void set_power_list2(std::vector<double> power_list) { d_power_list2 = power_list; }
   void set_timestamp(uint64_t ps, double pfs);

@@ -25,6 +25,7 @@ import struct
 
 def gen_and_append_crc32(s):
     crc = digital_swig.crc32(s)
+    #print "crc =", hex(crc)
     return s + struct.pack(">I", gru.hexint(crc) & 0xFFFFFFFF)
 
 def check_crc32(s):
@@ -34,5 +35,5 @@ def check_crc32(s):
     #print "msg = '%s'" % (msg,)
     actual = digital_swig.crc32(msg)
     (expected,) = struct.unpack(">I", s[-4:])
-    # print "actual =", hex(actual), "expected =", hex(expected)
+    #print "actual =", hex(actual), "expected =", hex(expected)
     return (actual == expected, msg)

@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <iostream>
 
-#define verbose 1 
+#define verbose 0 
 #define verbose2 0
 #define DEBUG   0
 

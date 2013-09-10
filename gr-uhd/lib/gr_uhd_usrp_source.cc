@@ -27,6 +27,10 @@
 #include <boost/thread/thread.hpp>
 #include <boost/make_shared.hpp>
 #include "gr_uhd_common.h"
+#include <sys/time.h>
+
+timeval uhd_timer;
+static const pmt::pmt_t PCTIME_KEY = pmt::pmt_string_to_symbol("rx_pctime");
 
 static const pmt::pmt_t TIME_KEY = pmt::pmt_string_to_symbol("rx_time");
 static const pmt::pmt_t RATE_KEY = pmt::pmt_string_to_symbol("rx_rate");
@@ -367,9 +371,16 @@ public:
                     pmt::pmt_from_uint64(_metadata.time_spec.get_full_secs()),
                     pmt::pmt_from_double(_metadata.time_spec.get_frac_secs())
                 );
+                //lzyou: create a pc timestamp pmt for the first sample
+                gettimeofday(&uhd_timer, NULL);
+                const pmt::pmt_t pc_time = pmt::pmt_make_tuple(
+                    pmt::pmt_from_uint64(uhd_timer.tv_sec),
+                    pmt::pmt_from_double(uhd_timer.tv_usec*1.0/1e6)
+                );
                 //create a tag set for each channel
                 for (size_t i = 0; i < _nchan; i++){
                     this->add_item_tag(i, nitems_written(0), TIME_KEY, val, _id);
+                    this->add_item_tag(i, nitems_written(0), PCTIME_KEY, pc_time, _id);
                     this->add_item_tag(i, nitems_written(0), RATE_KEY, pmt::pmt_from_double(_samp_rate), _id);
                     this->add_item_tag(i, nitems_written(0), FREQ_KEY, pmt::pmt_from_double(_center_freq), _id);
 //		    std::cout<<"... [USRP] Offset: "<<nitems_written(0)<<" \n";

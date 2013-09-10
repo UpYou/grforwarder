@@ -431,7 +431,7 @@ public:
                     //std::cout << "\t now: "<<(this->get_time_now().get_full_secs()+this->get_time_now().get_frac_secs())<<" set: "<<_metadata.time_spec.get_real_secs()<<std::endl;
                 }
                 else {
-                    if(verbose) {
+                    if(1) { //verbose) {
                         std::cout.precision(16);
                         std::cout << "\t now: " << now << " set: " << set << " diff: " << set-now << std::endl;
                         //std::cout << "\t now: "<<(this->get_time_now().get_full_secs()+this->get_time_now().get_frac_secs())<<" set: "<<_metadata.time_spec.get_real_secs()<<std::endl;
